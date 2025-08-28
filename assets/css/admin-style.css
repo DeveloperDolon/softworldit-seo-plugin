@@ -1,0 +1,87 @@
+.sitemap-exclusion-section {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.sitemap-exclusion-section h3 {
+    margin-top: 0;
+    color: #23282d;
+}
+
+.exclusion-search-box {
+    margin-bottom: 15px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.exclusion-search-box input {
+    flex: 1;
+}
+
+.exclusion-list-container {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #ccd0d4;
+    border-radius: 3px;
+    padding: 10px;
+    background: #f9f9f9;
+}
+
+.exclusion-checkbox-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 8px;
+}
+
+.exclusion-checkbox-item {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    background: #fff;
+    border: 1px solid #e1e1e1;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+}
+
+.exclusion-checkbox-item:hover {
+    background: #f0f6fc;
+    border-color: #007cba;
+}
+
+.exclusion-checkbox-item input[type="checkbox"] {
+    margin: 0 10px 0 0;
+}
+
+.page-title {
+    flex: 1;
+    font-weight: 500;
+}
+
+.page-id {
+    color: #666;
+    font-size: 0.9em;
+    margin-left: 8px;
+}
+
+.exclusion-actions {
+    margin-top: 15px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.selected-count {
+    margin-left: auto;
+    color: #666;
+    font-weight: 500;
+}
+
+/* For hidden items during search */
+.exclusion-checkbox-item.hidden {
+    display: none;
+}

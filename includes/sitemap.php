@@ -59,18 +59,31 @@ class SoftworldIT_SEO_Sitemap {
     }
 
     protected static function render_sitemap_index() {
-        $now         = esc_html( gmdate( 'c' ) );
-        $post_chunks = self::count_chunks_for( 'post' );
-        $page_chunks = self::count_chunks_for( 'page' );
+        $settings = get_option('softworld_sitemap_settings', [
+            'include_posts' => 1,
+            'include_pages' => 1,
+            'excluded_posts' => [],
+            'excluded_pages' => [],
+        ]);
 
+        $now = esc_html( gmdate( 'c' ) );
         $xml  = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
         $xml .= '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
 
-        for ( $i = 1; $i <= $post_chunks; $i++ ) {
-            $xml .= "<sitemap><loc>" . esc_url( home_url( "/sitemap-posts-{$i}.xml" ) ) . "</loc><lastmod>{$now}</lastmod></sitemap>\n";
+        // Include posts if enabled
+        if ($settings['include_posts']) {
+            $post_chunks = self::count_chunks_for( 'post' );
+            for ( $i = 1; $i <= $post_chunks; $i++ ) {
+                $xml .= "<sitemap><loc>" . esc_url( home_url( "/sitemap-posts-{$i}.xml" ) ) . "</loc><lastmod>{$now}</lastmod></sitemap>\n";
+            }
         }
-        for ( $i = 1; $i <= $page_chunks; $i++ ) {
-            $xml .= "<sitemap><loc>" . esc_url( home_url( "/sitemap-pages-{$i}.xml" ) ) . "</loc><lastmod>{$now}</lastmod></sitemap>\n";
+
+        // Include pages if enabled
+        if ($settings['include_pages']) {
+            $page_chunks = self::count_chunks_for( 'page' );
+            for ( $i = 1; $i <= $page_chunks; $i++ ) {
+                $xml .= "<sitemap><loc>" . esc_url( home_url( "/sitemap-pages-{$i}.xml" ) ) . "</loc><lastmod>{$now}</lastmod></sitemap>\n";
+            }
         }
 
         $xml .= '</sitemapindex>';
@@ -78,10 +91,24 @@ class SoftworldIT_SEO_Sitemap {
     }
 
     protected static function render_sitemap_body( $group, $page_number ) {
+        $settings = get_option('softworld_sitemap_settings', [
+            'include_posts' => 1,
+            'include_pages' => 1,
+            'excluded_posts' => [],
+            'excluded_pages' => [],
+        ]);
+
         $post_type = $group === 'pages' ? 'page' : 'post';
         $offset    = ( max( 1, $page_number ) - 1 ) * self::CHUNK_SIZE;
 
-        $q = new WP_Query( [
+        // Check if this post type is enabled
+        if (($post_type === 'post' && !$settings['include_posts']) || 
+            ($post_type === 'page' && !$settings['include_pages'])) {
+            return self::render_empty_sitemap();
+        }
+
+        // Build query args
+        $query_args = [
             'post_type'      => $post_type,
             'post_status'    => 'publish',
             'posts_per_page' => self::CHUNK_SIZE,
@@ -89,7 +116,15 @@ class SoftworldIT_SEO_Sitemap {
             'orderby'        => 'modified',
             'order'          => 'DESC',
             'fields'         => 'ids',
-        ] );
+        ];
+
+        // Add exclusion for specific posts/pages
+        $excluded_ids = $post_type === 'post' ? $settings['excluded_posts'] : $settings['excluded_pages'];
+        if (!empty($excluded_ids)) {
+            $query_args['post__not_in'] = $excluded_ids;
+        }
+
+        $q = new WP_Query( $query_args );
 
         $xml  = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
         $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
@@ -104,15 +139,59 @@ class SoftworldIT_SEO_Sitemap {
         return $xml;
     }
 
+    protected static function render_empty_sitemap() {
+        $xml  = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+        $xml .= '</urlset>';
+        return $xml;
+    }
+
     protected static function count_chunks_for( $post_type ) {
-        $counts = wp_count_posts( $post_type );
-        return max( 1, ceil( (int) ( $counts->publish ?? 0 ) / self::CHUNK_SIZE ) );
+        $settings = get_option('softworld_sitemap_settings', [
+            'include_posts' => 1,
+            'include_pages' => 1,
+            'excluded_posts' => [],
+            'excluded_pages' => [],
+        ]);
+
+        // Return 0 if this post type is disabled
+        if (($post_type === 'post' && !$settings['include_posts']) || 
+            ($post_type === 'page' && !$settings['include_pages'])) {
+            return 0;
+        }
+
+        // Get total count excluding specific items
+        $count_args = [
+            'post_type' => $post_type,
+            'post_status' => 'publish',
+            'posts_per_page' => -1,
+            'fields' => 'ids',
+        ];
+
+        $excluded_ids = $post_type === 'post' ? $settings['excluded_posts'] : $settings['excluded_pages'];
+        if (!empty($excluded_ids)) {
+            $count_args['post__not_in'] = $excluded_ids;
+        }
+
+        $count_query = new WP_Query($count_args);
+        $total_count = $count_query->found_posts;
+
+        return max( 1, ceil( $total_count / self::CHUNK_SIZE ) );
     }
 }
 
 register_activation_hook( __FILE__, function() {
     SoftworldIT_SEO_Sitemap::add_rewrite();
     flush_rewrite_rules();
+    
+    // Set default settings on activation
+    $default_settings = [
+        'include_posts' => 1,
+        'include_pages' => 1,
+        'excluded_posts' => [],
+        'excluded_pages' => [],
+    ];
+    add_option('softworld_sitemap_settings', $default_settings);
 });
 register_deactivation_hook( __FILE__, function() {
     flush_rewrite_rules();
