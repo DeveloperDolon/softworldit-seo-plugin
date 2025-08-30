@@ -276,4 +276,15 @@ class Softworld_AI_SEO_Role_Manager
             '1.0.0'
         );
     }
+
+    public function should_hide_meta_box() {
+        $options = get_option('softworld_ai_seo_roles', array());
+        $hidden_roles = isset($options['hidden_meta_box_roles']) ? $options['hidden_meta_box_roles'] : array();
+        
+        $current_user = wp_get_current_user();
+        $user_roles = $current_user->roles;
+        
+        // Check if current user has any of the hidden roles
+        return !empty(array_intersect($user_roles, $hidden_roles));
+    }
 }

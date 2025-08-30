@@ -118,6 +118,10 @@ class Softworld_AI_SEO_Plugin
     
     public function register_meta_boxes()
     {
+        // Check if current user can view the meta box
+        if ($this->role_manager->should_hide_meta_box()) {
+            return;
+        }
         
         // Register your SEO meta box
         add_meta_box(
