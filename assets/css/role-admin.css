@@ -1,0 +1,47 @@
+.role-checkbox-group {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #ccd0d4;
+    padding: 10px;
+    background: #fff;
+    border-radius: 4px;
+}
+
+.role-checkbox-label {
+    display: block;
+    padding: 5px 0;
+    margin: 0;
+}
+
+.role-checkbox-label:hover {
+    background-color: #f6f7f7;
+}
+
+.role-checkbox-label input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+.role-checkbox-label em {
+    color: #666;
+    font-style: italic;
+    font-size: 0.9em;
+}
+
+.wrap h1 {
+    margin-bottom: 20px;
+}
+
+.form-table th {
+    width: 200px;
+    padding: 15px 10px 15px 0;
+}
+
+.form-table td {
+    padding: 15px 10px;
+}
+
+.description {
+    font-style: italic;
+    color: #646970;
+    margin-top: 10px;
+}

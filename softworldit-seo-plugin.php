@@ -27,32 +27,84 @@ require_once plugin_dir_path(__FILE__) . 'includes/role-manager.php';
 // main plugin class
 class Softworld_AI_SEO_Plugin
 {
-    private $role_manager;
+   private $role_manager;
+    
     public function __construct()
     {
         add_action('init', array($this, 'init'));
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
         add_action('admin_enqueue_scripts', array($this, 'admin_enqueue_scripts'));
 
-        // Add Sitemap Admin Page
+        // Add Admin Pages
         add_action('admin_menu', array($this, 'register_admin_menu'));
 
         // plugin activation/deactivation hooks
         register_activation_hook(__FILE__, array($this, 'activate'));
         register_deactivation_hook(__FILE__, array($this, 'deactivate'));
-        $this->role_manager = new Softworld_AI_SEO_Role_Manager();
+        
+        // Initialize Role Manager
+        $this->role_manager = new Softworld_AI_SEO_Role_Manager('softworld-seo');
     }
 
     public function init()
     {
+        // Create custom roles if they don't exist
+        $this->create_custom_roles();
+        
         // Initialize SEO plugin features if needed
-
+        add_action('add_meta_boxes', array($this, 'register_meta_boxes'));
+    }
+    
+    private function create_custom_roles() {
+        // Create SEO Manager role if it doesn't exist
+        if (!get_role('seo_manager')) {
+            add_role('seo_manager', __('SEO Manager', 'softworld-ai-seo'), array(
+                'read' => true,
+                'edit_posts' => true,
+                'delete_posts' => true,
+                'publish_posts' => true,
+                'upload_files' => true,
+                'manage_categories' => true,
+            ));
+        }
+        
+        // Create SEO Editor role if it doesn't exist
+        if (!get_role('seo_editor')) {
+            add_role('seo_editor', __('SEO Editor', 'softworld-ai-seo'), array(
+                'read' => true,
+                'edit_posts' => true,
+                'delete_posts' => false,
+                'publish_posts' => false,
+                'upload_files' => true,
+            ));
+        }
+    }
+    
+    public function register_meta_boxes()
+    {
+        // Register your SEO meta box
+        add_meta_box(
+            'softworld_ai_seo_meta_box',
+            'SOFTWORLD AI SEO',
+            array($this, 'render_meta_box'),
+            array('post', 'page'),
+            'normal',
+            'high'
+        );
+    }
+    
+    public function render_meta_box($post)
+    {
+        // Your meta box content here
+        echo '<div class="softworld-ai-seo-meta-box">';
+        echo '<p>AI-powered SEO optimization will go here.</p>';
+        echo '</div>';
     }
 
     public function enqueue_scripts()
     {
         // Enqueue frontend scripts if needed
-         wp_enqueue_style(
+        wp_enqueue_style(
             'softworldit-seo-admin-style',
             plugin_dir_url(__FILE__) . 'assets/css/admin-style.css',
             [],
@@ -63,7 +115,7 @@ class Softworld_AI_SEO_Plugin
     public function admin_enqueue_scripts()
     {
         // Enqueue admin scripts if needed
-         wp_enqueue_script(
+        wp_enqueue_script(
             'softworldit-seo-admin-script',
             plugin_dir_url(__FILE__) . 'assets/js/admin-script.js',
             ['jquery'],
@@ -76,6 +128,10 @@ class Softworld_AI_SEO_Plugin
     {
         // Register sitemap rewrite rules on activation
         SoftworldIT_SEO_Sitemap::add_rewrite();
+        
+        // Create custom roles
+        $this->create_custom_roles();
+        
         flush_rewrite_rules();
     }
 

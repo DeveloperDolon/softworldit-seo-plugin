@@ -11,10 +11,11 @@ if (!defined('ABSPATH')) {
 class Softworld_AI_SEO_Role_Manager {
     
     private $capability;
-    private $settings_page;
+    private $parent_slug;
     
-    public function __construct() {
+    public function __construct($parent_slug = 'softworld-seo') {
         $this->capability = 'manage_options';
+        $this->parent_slug = $parent_slug;
         $this->init_hooks();
     }
     
@@ -28,11 +29,14 @@ class Softworld_AI_SEO_Role_Manager {
         
         // Capability control
         add_filter('user_has_cap', array($this, 'filter_capabilities'), 10, 4);
+        
+        // Admin scripts
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
     }
     
     public function add_admin_menu() {
         add_submenu_page(
-            'softworld-ai-seo',
+            $this->parent_slug,
             __('Role Access Settings', 'softworld-ai-seo'),
             __('Role Access', 'softworld-ai-seo'),
             $this->capability,
@@ -79,10 +83,18 @@ class Softworld_AI_SEO_Role_Manager {
         $allowed_roles = isset($options['allowed_roles']) ? $options['allowed_roles'] : array('administrator');
         $roles = get_editable_roles();
         
+        echo '<div class="role-checkbox-group">';
         foreach ($roles as $role_id => $role_info) {
-            $checked = in_array($role_id, $allowed_roles) ? 'checked="checked"' : '';
-            echo '<label><input type="checkbox" name="softworld_ai_seo_roles[allowed_roles][]" value="' . esc_attr($role_id) . '" ' . $checked . '> ' . esc_html($role_info['name']) . '</label><br>';
+            // Administrator always has access
+            if ($role_id === 'administrator') {
+                $checked = 'checked="checked" disabled';
+                echo '<label class="role-checkbox-label"><input type="checkbox" name="softworld_ai_seo_roles[allowed_roles][]" value="' . esc_attr($role_id) . '" ' . $checked . '> ' . esc_html($role_info['name']) . ' <em>(always has access)</em></label><br>';
+            } else {
+                $checked = in_array($role_id, $allowed_roles) ? 'checked="checked"' : '';
+                echo '<label class="role-checkbox-label"><input type="checkbox" name="softworld_ai_seo_roles[allowed_roles][]" value="' . esc_attr($role_id) . '" ' . $checked . '> ' . esc_html($role_info['name']) . '</label><br>';
+            }
         }
+        echo '</div>';
     }
     
     public function render_meta_box_roles_field() {
@@ -90,10 +102,12 @@ class Softworld_AI_SEO_Role_Manager {
         $hidden_roles = isset($options['hidden_meta_box_roles']) ? $options['hidden_meta_box_roles'] : array();
         $roles = get_editable_roles();
         
+        echo '<div class="role-checkbox-group">';
         foreach ($roles as $role_id => $role_info) {
             $checked = in_array($role_id, $hidden_roles) ? 'checked="checked"' : '';
-            echo '<label><input type="checkbox" name="softworld_ai_seo_roles[hidden_meta_box_roles][]" value="' . esc_attr($role_id) . '" ' . $checked . '> ' . esc_html($role_info['name']) . '</label><br>';
+            echo '<label class="role-checkbox-label"><input type="checkbox" name="softworld_ai_seo_roles[hidden_meta_box_roles][]" value="' . esc_attr($role_id) . '" ' . $checked . '> ' . esc_html($role_info['name']) . '</label><br>';
         }
+        echo '</div>';
         
         echo '<p class="description">' . __('The SEO meta box will be hidden from selected roles on post edit screens.', 'softworld-ai-seo') . '</p>';
     }
@@ -135,7 +149,7 @@ class Softworld_AI_SEO_Role_Manager {
     
     public function render_settings_page() {
         if (!current_user_can($this->capability)) {
-            return;
+            wp_die(__('You do not have sufficient permissions to access this page.'));
         }
         
         // Show success message if settings were saved
@@ -156,16 +170,31 @@ class Softworld_AI_SEO_Role_Manager {
                 <?php
                 settings_fields('softworld_ai_seo_role_settings');
                 do_settings_sections('softworld-ai-seo-role-access');
-                submit_button();
+                submit_button(__('Save Settings', 'softworld-ai-seo'));
                 ?>
             </form>
+            
+            <div style="margin-top: 30px; padding: 20px; background: #f9f9f9; border-left: 4px solid #0073aa;">
+                <h3>How to Assign Roles to Users</h3>
+                <p>To assign the SEO Manager or SEO Editor role to users:</p>
+                <ol>
+                    <li>Go to <a href="<?php echo admin_url('users.php'); ?>">Users → All Users</a></li>
+                    <li>Click on the user you want to modify</li>
+                    <li>Scroll down to the "Role" dropdown menu</li>
+                    <li>Select "SEO Manager" or "SEO Editor" from the dropdown</li>
+                    <li>Click "Update User" to save changes</li>
+                </ol>
+                <p><strong>Available Custom Roles:</strong></p>
+                <ul>
+                    <li><strong>SEO Manager</strong>: Can manage posts, categories, and access plugin settings</li>
+                    <li><strong>SEO Editor</strong>: Can edit posts but cannot publish or access plugin settings</li>
+                </ul>
+            </div>
         </div>
         <?php
     }
     
     public function control_meta_box_visibility() {
-        global $wp_meta_boxes;
-        
         $options = get_option('softworld_ai_seo_roles', array());
         $hidden_roles = isset($options['hidden_meta_box_roles']) ? $options['hidden_meta_box_roles'] : array();
         
@@ -186,7 +215,10 @@ class Softworld_AI_SEO_Role_Manager {
         $allowed_roles = isset($options['allowed_roles']) ? $options['allowed_roles'] : array('administrator');
         
         // Check if we're dealing with our plugin's capabilities
-        if (in_array('manage_softworld_ai_seo', $caps)) {
+        $plugin_caps = array('manage_softworld_ai_seo', 'softworld_ai_seo_manage_settings');
+        $matched_caps = array_intersect($caps, $plugin_caps);
+        
+        if (!empty($matched_caps)) {
             $user_roles = $user->roles;
             
             // Check if user has any of the allowed roles
@@ -204,5 +236,18 @@ class Softworld_AI_SEO_Role_Manager {
         }
         
         return $allcaps;
+    }
+    
+    public function enqueue_admin_scripts($hook) {
+        if (strpos($hook, 'softworld-ai-seo-role-access') === false) {
+            return;
+        }
+        
+        wp_enqueue_style(
+            'softworld-ai-seo-role-admin',
+            plugin_dir_url(__FILE__) . '../assets/css/role-admin.css',
+            array(),
+            '1.0.0'
+        );
     }
 }
