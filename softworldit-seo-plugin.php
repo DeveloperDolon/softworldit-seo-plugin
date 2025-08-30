@@ -46,13 +46,49 @@ class Softworld_AI_SEO_Plugin
         $this->role_manager = new Softworld_AI_SEO_Role_Manager('softworld-seo');
     }
 
-    public function init()
+   public function init()
     {
         // Create custom roles if they don't exist
         $this->create_custom_roles();
         
         // Initialize SEO plugin features if needed
-        add_action('add_meta_boxes', array($this, 'register_meta_boxes'));
+        add_action('add_meta_boxes', array($this, 'register_meta_boxes'), 10);
+        
+        // Save meta box data
+        add_action('save_post', array($this, 'save_meta_box_data'));
+    }
+
+    public function save_meta_box_data($post_id)
+    {
+        // Check if our nonce is set
+        if (!isset($_POST['softworld_ai_seo_nonce'])) {
+            return;
+        }
+        
+        // Verify that the nonce is valid
+        if (!wp_verify_nonce($_POST['softworld_ai_seo_nonce'], 'softworld_ai_seo_meta_box')) {
+            return;
+        }
+        
+        // If this is an autosave, our form has not been submitted, so we don't want to do anything
+        if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+            return;
+        }
+        
+        // Check the user's permissions
+        if (!current_user_can('edit_post', $post_id)) {
+            return;
+        }
+        
+        // Save SEO Title
+        if (isset($_POST['softworld_ai_seo_title'])) {
+            update_post_meta($post_id, '_softworld_ai_seo_title', sanitize_text_field($_POST['softworld_ai_seo_title']));
+        }
+        
+        // Save SEO Description
+        if (isset($_POST['softworld_ai_seo_description'])) {
+            update_post_meta($post_id, '_softworld_ai_seo_description', sanitize_textarea_field($_POST['softworld_ai_seo_description']));
+        }
     }
     
     private function create_custom_roles() {
@@ -82,6 +118,7 @@ class Softworld_AI_SEO_Plugin
     
     public function register_meta_boxes()
     {
+        
         // Register your SEO meta box
         add_meta_box(
             'softworld_ai_seo_meta_box',
@@ -92,12 +129,31 @@ class Softworld_AI_SEO_Plugin
             'high'
         );
     }
-    
+
     public function render_meta_box($post)
     {
         // Your meta box content here
         echo '<div class="softworld-ai-seo-meta-box">';
         echo '<p>AI-powered SEO optimization will go here.</p>';
+        
+        // Example: Add nonce field for security
+        wp_nonce_field('softworld_ai_seo_meta_box', 'softworld_ai_seo_nonce');
+        
+        // Example: Get existing meta values
+        $meta_title = get_post_meta($post->ID, '_softworld_ai_seo_title', true);
+        $meta_description = get_post_meta($post->ID, '_softworld_ai_seo_description', true);
+        
+        // Example form fields
+        echo '<div style="margin: 10px 0;">';
+        echo '<label for="softworld_ai_seo_title" style="display: block; margin-bottom: 5px; font-weight: bold;">SEO Title:</label>';
+        echo '<input type="text" id="softworld_ai_seo_title" name="softworld_ai_seo_title" value="' . esc_attr($meta_title) . '" style="width: 100%; padding: 5px;">';
+        echo '</div>';
+        
+        echo '<div style="margin: 10px 0;">';
+        echo '<label for="softworld_ai_seo_description" style="display: block; margin-bottom: 5px; font-weight: bold;">SEO Description:</label>';
+        echo '<textarea id="softworld_ai_seo_description" name="softworld_ai_seo_description" style="width: 100%; height: 80px; padding: 5px;">' . esc_textarea($meta_description) . '</textarea>';
+        echo '</div>';
+        
         echo '</div>';
     }
 
