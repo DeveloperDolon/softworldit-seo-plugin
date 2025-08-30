@@ -22,10 +22,12 @@ define('AI_SEO_VERSION', '1.0.0');
 
 // Include sitemap feature
 require_once plugin_dir_path(__FILE__) . 'includes/sitemap.php';
+require_once plugin_dir_path(__FILE__) . 'includes/role-manager.php';
 
 // main plugin class
 class Softworld_AI_SEO_Plugin
 {
+    private $role_manager;
     public function __construct()
     {
         add_action('init', array($this, 'init'));
@@ -38,6 +40,7 @@ class Softworld_AI_SEO_Plugin
         // plugin activation/deactivation hooks
         register_activation_hook(__FILE__, array($this, 'activate'));
         register_deactivation_hook(__FILE__, array($this, 'deactivate'));
+        $this->role_manager = new Softworld_AI_SEO_Role_Manager();
     }
 
     public function init()

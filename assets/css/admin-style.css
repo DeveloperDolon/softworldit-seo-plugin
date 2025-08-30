@@ -85,3 +85,34 @@
 .exclusion-checkbox-item.hidden {
     display: none;
 }
+
+
+/* role admin css */
+.role-selected {
+    font-weight: bold;
+    color: #2271b1;
+}
+
+.wrap h2 {
+    margin-bottom: 20px;
+}
+
+.form-table th {
+    width: 200px;
+}
+
+.form-table label {
+    display: block;
+    margin-bottom: 8px;
+    padding: 5px 0;
+}
+
+.form-table label:hover {
+    background-color: #f6f7f7;
+}
+
+.description {
+    font-style: italic;
+    margin-top: 10px;
+}
+/* role admin css */
