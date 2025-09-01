@@ -525,12 +525,12 @@ class Softworld_AI_SEO_Plugin
                             <tr>
                                 <th scope="row">Include in Sitemap</th>
                                 <td>
-                                    <label class="softworld-checkbox-label">
+                                    <label class="softworld-checkbox-label" style="width: fit-content;">
                                         <input type="checkbox" name="include_posts" value="1" <?php checked($settings['include_posts'], 1); ?>>
                                         <span class="checkmark"></span>
                                         Include Posts
                                     </label><br>
-                                    <label class="softworld-checkbox-label">
+                                    <label class="softworld-checkbox-label" style="width: fit-content;">
                                         <input type="checkbox" name="include_pages" value="1" <?php checked($settings['include_pages'], 1); ?>>
                                         <span class="checkmark"></span>
                                         Include Pages
