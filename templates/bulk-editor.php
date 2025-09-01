@@ -1,9 +1,8 @@
 <div class="wrap">
     <h1><?php _e('Bulk SEO Editor', 'softworld-ai-seo'); ?></h1>
-    
-    <form method="get" action="<?php echo admin_url('admin.php'); ?>">
+   
+    <form method="get" action="<?php echo esc_url( admin_url( 'admin.php?page=' . $page_slug ) ); ?>">
         <input type="hidden" name="page" value="<?php echo esc_attr($page_slug); ?>">
-        
         <div class="tablenav top">
             <div class="alignleft actions">
                 <label for="post-type-filter" class="screen-reader-text"><?php _e('Filter by post type', 'softworld-ai-seo'); ?></label>
@@ -19,7 +18,7 @@
             </div>
         </div>
     </form>
-    
+   
     <?php if ($posts_query->have_posts()) : ?>
         <form id="softworld-bulk-seo-form">
             <?php wp_nonce_field('softworld_bulk_seo_nonce', 'softworld_bulk_nonce'); ?>
@@ -42,42 +41,42 @@
                                 </div>
                             </td>
                             <td>
-                                <textarea name="seo_data[<?php the_ID(); ?>][title]" rows="2" class="large-text"><?php 
-                                    echo esc_textarea(get_post_meta(get_the_ID(), '_softworld_ai_seo_title', true)); 
+                                <textarea name="seo_data[<?php the_ID(); ?>][title]" rows="2" class="large-text"><?php
+                                    echo esc_textarea(get_post_meta(get_the_ID(), '_softworld_ai_seo_title', true));
                                 ?></textarea>
                             </td>
                             <td>
-                                <textarea name="seo_data[<?php the_ID(); ?>][description]" rows="3" class="large-text"><?php 
-                                    echo esc_textarea(get_post_meta(get_the_ID(), '_softworld_ai_seo_description', true)); 
+                                <textarea name="seo_data[<?php the_ID(); ?>][description]" rows="3" class="large-text"><?php
+                                    echo esc_textarea(get_post_meta(get_the_ID(), '_softworld_ai_seo_description', true));
                                 ?></textarea>
                             </td>
                         </tr>
                     <?php endwhile; ?>
                 </tbody>
             </table>
-            
+           
             <div class="tablenav bottom">
                 <div class="alignleft actions bulkactions">
                     <input type="submit" class="button button-primary" value="<?php _e('Save Changes', 'softworld-ai-seo'); ?>">
                     <span class="spinner" style="float: none;"></span>
                 </div>
-                
+               
                 <div class="tablenav-pages">
                     <?php
-                    $pagination_args = array(
-                        'base' => add_query_arg('paged', '%#%'),
-                        'format' => '',
-                        'prev_text' => __('&laquo;'),
-                        'next_text' => __('&raquo;'),
-                        'total' => $posts_query->max_num_pages,
-                        'current' => $paged
-                    );
-                    
-                    if (!empty($post_type_filter)) {
-                        $pagination_args['add_args'] = array('post_type' => $post_type_filter);
-                    }
-                    
-                    echo paginate_links($pagination_args);
+                        $pagination_args = array(
+                            'base' => add_query_arg('paged', '%#%'),
+                            'format' => '',
+                            'prev_text' => __('&laquo;'),
+                            'next_text' => __('&raquo;'),
+                            'total' => $posts_query->max_num_pages,
+                            'current' => $paged
+                        );
+                       
+                        if (!empty($post_type_filter)) {
+                            $pagination_args['add_args'] = array('post_type' => $post_type_filter);
+                        }
+                       
+                        echo paginate_links($pagination_args);
                     ?>
                 </div>
             </div>
@@ -87,7 +86,7 @@
             <p><?php _e('No posts found for the selected post type.', 'softworld-ai-seo'); ?></p>
         </div>
     <?php endif; ?>
-    
+   
     <?php wp_reset_postdata(); ?>
 </div>
 
@@ -95,16 +94,19 @@
 jQuery(document).ready(function($) {
     $('#softworld-bulk-seo-form').on('submit', function(e) {
         e.preventDefault();
-        
+       
         var $spinner = $(this).find('.spinner');
         $spinner.addClass('is-active');
-        
+       
         var formData = $(this).serialize();
         formData += '&action=softworld_bulk_update_seo';
-        
-        $.post(ajaxurl, formData, function(response) {
+       
+        // Use the localized ajax_url instead of ajaxurl
+        var ajaxUrl = (typeof softworld_ajax !== 'undefined') ? softworld_ajax.ajax_url : ajaxurl;
+       
+        $.post(ajaxUrl, formData, function(response) {
             $spinner.removeClass('is-active');
-            
+           
             if(response.success) {
                 alert(response.data.message);
             } else {

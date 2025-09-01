@@ -19,12 +19,10 @@ class Softworld_AI_SEO_Tools
     public function init()
     {
         // Add bulk editor to admin menu
-        add_action('admin_menu', array($this, 'add_bulk_editor_page'));
+        add_action('admin_menu', array($this, 'add_bulk_editor_page'), 20);
 
         // Handle WooCommerce integration if active
         add_action('plugins_loaded', array($this, 'check_woocommerce_integration'));
-
-        // Add AJAX handlers for bulk operations
         add_action('wp_ajax_softworld_bulk_update_seo', array($this, 'handle_bulk_update'));
     }
 
@@ -51,9 +49,17 @@ class Softworld_AI_SEO_Tools
         add_action('admin_enqueue_scripts', array($this, 'enqueue_bulk_editor_scripts'));
     }
 
+    // Corrected enqueue_bulk_editor_scripts method
     public function enqueue_bulk_editor_scripts()
     {
-        wp_enqueue_script('softworld-bulk-editor', plugin_dir_url(__FILE__) . '../assets/js/bulk-editor.js', array('jquery'), '1.0', true);
+        wp_enqueue_script(
+            'softworld-bulk-editor',
+            AI_SEO_PLUGIN_URL . 'assets/js/bulk-editor.js', // Use the defined constant
+            array('jquery'),
+            '1.0',
+            true
+        );
+
         wp_localize_script('softworld-bulk-editor', 'softworld_ajax', array(
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('softworld_bulk_seo_nonce')
@@ -117,7 +123,7 @@ class Softworld_AI_SEO_Tools
         ) {
             wp_send_json_error(__('Unauthorized', 'softworld-ai-seo'));
         }
-        
+
         $updated = 0;
         $errors = 0;
 

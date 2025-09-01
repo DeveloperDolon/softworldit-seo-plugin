@@ -85,3 +85,51 @@
 .exclusion-checkbox-item.hidden {
     display: none;
 }
+
+
+/* tesxonomis */
+.exclusion-list-container {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    padding: 10px;
+    margin: 10px 0;
+}
+
+.exclusion-checkbox-item {
+    display: block;
+    margin-bottom: 8px;
+    padding: 5px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.exclusion-checkbox-item:last-child {
+    border-bottom: none;
+}
+
+.exclusion-checkbox-item:hover {
+    background-color: #f9f9f9;
+}
+
+.exclusion-search-box {
+    margin-bottom: 10px;
+}
+
+.exclusion-actions {
+    margin-top: 10px;
+}
+
+.selected-count {
+    margin-left: 10px;
+    font-weight: bold;
+}
+
+.post-title, .page-title {
+    font-weight: 600;
+}
+
+.post-id, .page-id {
+    color: #666;
+    font-size: 0.9em;
+    margin-left: 5px;
+}

@@ -23,7 +23,7 @@ define('AI_SEO_VERSION', '1.0.0');
 // Include sitemap feature
 require_once plugin_dir_path(__FILE__) . 'includes/sitemap.php';
 require_once plugin_dir_path(__FILE__) . 'includes/role-manager.php';
-require_once plugin_dir_path(__FILE__) . 'includes/seo-tools.php'; 
+require_once plugin_dir_path(__FILE__) . 'includes/seo-tools.php';
 require_once plugin_dir_path(__FILE__) . 'includes/robots-txt-editor.php'; // Add this line
 
 // main plugin class
@@ -32,9 +32,9 @@ class Softworld_AI_SEO_Plugin
     private $role_manager;
     private $seo_tools;
     private $robots_txt_editor; // Add this property
-    
-    
-     public function __construct()
+
+
+    public function __construct()
     {
         add_action('init', array($this, 'init'));
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
@@ -46,25 +46,83 @@ class Softworld_AI_SEO_Plugin
         // plugin activation/deactivation hooks
         register_activation_hook(__FILE__, array($this, 'activate'));
         register_deactivation_hook(__FILE__, array($this, 'deactivate'));
-        
+
         // Initialize Role Manager
         $this->role_manager = new Softworld_AI_SEO_Role_Manager('softworld-ai-seo');
         // Initialize SEO Tools
         $this->seo_tools = new Softworld_AI_SEO_Tools('softworld-ai-seo');
         // Initialize Robots.txt Editor
         $this->robots_txt_editor = new Softworld_AI_SEO_Robots_Txt_Editor();
+
+        add_action('wp_ajax_softworld_search_posts', [$this, 'ajax_search_posts']);
+        add_action('wp_ajax_softworld_search_pages', [$this, 'ajax_search_pages']);
     }
 
-   public function init()
+    public function init()
     {
         // Create custom roles if they don't exist
         $this->create_custom_roles();
-        
+
         // Initialize SEO plugin features if needed
         add_action('add_meta_boxes', array($this, 'register_meta_boxes'), 10);
-        
+
         // Save meta box data
         add_action('save_post', array($this, 'save_meta_box_data'));
+    }
+
+    public function ajax_search_posts()
+    {
+        check_ajax_referer('search_posts_nonce', 'nonce');
+
+        $search = sanitize_text_field($_GET['term']);
+
+        $posts = get_posts([
+            'post_type' => 'post',
+            'post_status' => 'publish',
+            's' => $search,
+            'posts_per_page' => 10,
+            'orderby' => 'title',
+            'order' => 'ASC'
+        ]);
+
+        $results = [];
+        foreach ($posts as $post) {
+            $results[] = [
+                'id' => $post->ID,
+                'label' => $post->post_title . ' (ID: ' . $post->ID . ')',
+                'value' => $post->post_title
+            ];
+        }
+
+        wp_send_json($results);
+    }
+
+    // AJAX handler for searching pages
+    public function ajax_search_pages()
+    {
+        check_ajax_referer('search_pages_nonce', 'nonce');
+
+        $search = sanitize_text_field($_GET['term']);
+
+        $pages = get_posts([
+            'post_type' => 'page',
+            'post_status' => 'publish',
+            's' => $search,
+            'posts_per_page' => 10,
+            'orderby' => 'title',
+            'order' => 'ASC'
+        ]);
+
+        $results = [];
+        foreach ($pages as $page) {
+            $results[] = [
+                'id' => $page->ID,
+                'label' => $page->post_title . ' (ID: ' . $page->ID . ')',
+                'value' => $page->post_title
+            ];
+        }
+
+        wp_send_json($results);
     }
 
     public function save_meta_box_data($post_id)
@@ -73,34 +131,35 @@ class Softworld_AI_SEO_Plugin
         if (!isset($_POST['softworld_ai_seo_nonce'])) {
             return;
         }
-        
+
         // Verify that the nonce is valid
         if (!wp_verify_nonce($_POST['softworld_ai_seo_nonce'], 'softworld_ai_seo_meta_box')) {
             return;
         }
-        
+
         // If this is an autosave, our form has not been submitted, so we don't want to do anything
         if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
             return;
         }
-        
+
         // Check the user's permissions
         if (!current_user_can('edit_post', $post_id)) {
             return;
         }
-        
+
         // Save SEO Title
         if (isset($_POST['softworld_ai_seo_title'])) {
             update_post_meta($post_id, '_softworld_ai_seo_title', sanitize_text_field($_POST['softworld_ai_seo_title']));
         }
-        
+
         // Save SEO Description
         if (isset($_POST['softworld_ai_seo_description'])) {
             update_post_meta($post_id, '_softworld_ai_seo_description', sanitize_textarea_field($_POST['softworld_ai_seo_description']));
         }
     }
-    
-    private function create_custom_roles() {
+
+    private function create_custom_roles()
+    {
         // Create SEO Manager role if it doesn't exist
         if (!get_role('seo_manager')) {
             add_role('seo_manager', __('SEO Manager', 'softworld-ai-seo'), array(
@@ -112,7 +171,7 @@ class Softworld_AI_SEO_Plugin
                 'manage_categories' => true,
             ));
         }
-        
+
         // Create SEO Editor role if it doesn't exist
         if (!get_role('seo_editor')) {
             add_role('seo_editor', __('SEO Editor', 'softworld-ai-seo'), array(
@@ -124,14 +183,14 @@ class Softworld_AI_SEO_Plugin
             ));
         }
     }
-    
+
     public function register_meta_boxes()
     {
         // Check if current user can view the meta box
         if ($this->role_manager->should_hide_meta_box()) {
             return;
         }
-        
+
         // Register your SEO meta box
         add_meta_box(
             'softworld_ai_seo_meta_box',
@@ -148,25 +207,25 @@ class Softworld_AI_SEO_Plugin
         // Your meta box content here
         echo '<div class="softworld-ai-seo-meta-box">';
         echo '<p>AI-powered SEO optimization will go here.</p>';
-        
+
         // Example: Add nonce field for security
         wp_nonce_field('softworld_ai_seo_meta_box', 'softworld_ai_seo_nonce');
-        
+
         // Example: Get existing meta values
         $meta_title = get_post_meta($post->ID, '_softworld_ai_seo_title', true);
         $meta_description = get_post_meta($post->ID, '_softworld_ai_seo_description', true);
-        
+
         // Example form fields
         echo '<div style="margin: 10px 0;">';
         echo '<label for="softworld_ai_seo_title" style="display: block; margin-bottom: 5px; font-weight: bold;">SEO Title:</label>';
         echo '<input type="text" id="softworld_ai_seo_title" name="softworld_ai_seo_title" value="' . esc_attr($meta_title) . '" style="width: 100%; padding: 5px;">';
         echo '</div>';
-        
+
         echo '<div style="margin: 10px 0;">';
         echo '<label for="softworld_ai_seo_description" style="display: block; margin-bottom: 5px; font-weight: bold;">SEO Description:</label>';
         echo '<textarea id="softworld_ai_seo_description" name="softworld_ai_seo_description" style="width: 100%; height: 80px; padding: 5px;">' . esc_textarea($meta_description) . '</textarea>';
         echo '</div>';
-        
+
         echo '</div>';
     }
 
@@ -197,10 +256,10 @@ class Softworld_AI_SEO_Plugin
     {
         // Register sitemap rewrite rules on activation
         SoftworldIT_SEO_Sitemap::add_rewrite();
-        
+
         // Create custom roles
         $this->create_custom_roles();
-        
+
         flush_rewrite_rules();
     }
 
@@ -235,7 +294,7 @@ class Softworld_AI_SEO_Plugin
             array($this, 'render_sitemap_admin')
         );
 
-          // Add Robots.txt submenu
+        // Add Robots.txt submenu
         add_submenu_page(
             'softworld-ai-seo',
             'Robots.txt Editor',
@@ -267,9 +326,9 @@ class Softworld_AI_SEO_Plugin
             <h1>AI Settings</h1>
             <form method="post" action="options.php">
                 <?php
-                    settings_fields('softworld_ai_settings_group');
-                    do_settings_sections('softworldit-seo-settings');
-                    submit_button();
+                settings_fields('softworld_ai_settings_group');
+                do_settings_sections('softworldit-seo-settings');
+                submit_button();
                 ?>
             </form>
         </div>
@@ -287,6 +346,20 @@ class Softworld_AI_SEO_Plugin
      */
     public function render_sitemap_admin()
     {
+        // Define default settings
+        $default_settings = [
+            'include_posts' => 1,
+            'include_pages' => 1,
+            'excluded_posts' => [],
+            'excluded_pages' => [],
+            'include_taxonomies' => ['category', 'post_tag'],
+            'include_cpt' => [],
+        ];
+
+        // Get current settings with proper defaults
+        $settings = get_option('softworld_sitemap_settings', $default_settings);
+        $settings = wp_parse_args($settings, $default_settings);
+
         // Handle form submission
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (isset($_POST['regenerate_rules'])) {
@@ -295,40 +368,64 @@ class Softworld_AI_SEO_Plugin
                 echo '<div class="updated notice"><p>Sitemap rules regenerated successfully.</p></div>';
             } elseif (isset($_POST['save_settings'])) {
                 // Save sitemap settings
-                $settings = [
+                $new_settings = [
                     'include_posts' => isset($_POST['include_posts']) ? 1 : 0,
                     'include_pages' => isset($_POST['include_pages']) ? 1 : 0,
                     'excluded_posts' => isset($_POST['excluded_posts']) ? array_map('intval', $_POST['excluded_posts']) : [],
                     'excluded_pages' => isset($_POST['excluded_pages']) ? array_map('intval', $_POST['excluded_pages']) : [],
+                    'include_taxonomies' => isset($_POST['include_taxonomies']) ? $_POST['include_taxonomies'] : [],
+                    'include_cpt' => isset($_POST['include_cpt']) ? $_POST['include_cpt'] : [],
                 ];
-                update_option('softworld_sitemap_settings', $settings);
+
+                // Ensure arrays are properly formatted
+                $new_settings['include_taxonomies'] = is_array($new_settings['include_taxonomies']) ?
+                    $new_settings['include_taxonomies'] : [];
+                $new_settings['include_cpt'] = is_array($new_settings['include_cpt']) ?
+                    $new_settings['include_cpt'] : [];
+
+                update_option('softworld_sitemap_settings', $new_settings);
+                $settings = $new_settings; // Update current settings for display
                 echo '<div class="updated notice"><p>Sitemap settings saved successfully.</p></div>';
             }
         }
 
-        // Get current settings
-        $settings = get_option('softworld_sitemap_settings', [
-            'include_posts' => 1,
-            'include_pages' => 1,
-            'excluded_posts' => [],
-            'excluded_pages' => [],
-        ]);
+        // Get all public taxonomies
+        $taxonomies = get_taxonomies(['public' => true], 'objects');
 
-        // Get all posts and pages for exclusion lists
-        $all_posts = get_posts([
+        // Get all custom post types
+        $cpts = get_post_types([
+            'public' => true,
+            '_builtin' => false
+        ], 'objects');
+
+        // Get excluded posts and pages for display
+        $excluded_posts = !empty($settings['excluded_posts']) ? get_posts([
             'post_type' => 'post',
-            'post_status' => 'publish',
+            'post__in' => $settings['excluded_posts'],
             'posts_per_page' => -1,
             'orderby' => 'title',
             'order' => 'ASC'
-        ]);
+        ]) : [];
 
-        $all_pages = get_posts([
+        $excluded_pages = !empty($settings['excluded_pages']) ? get_posts([
             'post_type' => 'page',
-            'post_status' => 'publish',
+            'post__in' => $settings['excluded_pages'],
             'posts_per_page' => -1,
             'orderby' => 'title',
             'order' => 'ASC'
+        ]) : [];
+
+        // Enqueue scripts and styles for the improved UI
+        wp_enqueue_script('jquery-ui-autocomplete');
+        wp_enqueue_script('softworldit-seo-sitemap-admin', plugin_dir_url(__FILE__) . 'assets/js/sitemap-admin.js', ['jquery', 'jquery-ui-autocomplete'], '1.0.0', true);
+        wp_enqueue_style('softworldit-seo-sitemap-admin', plugin_dir_url(__FILE__) . 'assets/css/sitemap-admin.css', [], '1.0.0');
+
+        // Localize script for AJAX
+        wp_localize_script('softworldit-seo-sitemap-admin', 'softworld_sitemap', [
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('softworld_sitemap_nonce'),
+            'search_posts_nonce' => wp_create_nonce('search_posts_nonce'),
+            'search_pages_nonce' => wp_create_nonce('search_pages_nonce'),
         ]);
 
         ?>
@@ -341,120 +438,169 @@ class Softworld_AI_SEO_Plugin
                 </a>
             </p>
 
-            <h2>Content Settings</h2>
-            <form method="post">
-                <table class="form-table">
-                    <tr>
-                        <th scope="row">Include in Sitemap</th>
-                        <td>
-                            <label>
-                                <input type="checkbox" name="include_posts" value="1" <?php checked($settings['include_posts'], 1); ?>>
-                                Include Posts
-                            </label><br>
-                            <label>
-                                <input type="checkbox" name="include_pages" value="1" <?php checked($settings['include_pages'], 1); ?>>
-                                Include Pages
-                            </label>
-                        </td>
-                    </tr>
+            <div class="softworld-sitemap-container">
+                <form method="post" id="softworld-sitemap-form">
+                    <div class="softworld-sitemap-section">
+                        <h2>Content Settings</h2>
+                        <table class="form-table">
+                            <tr>
+                                <th scope="row">Include in Sitemap</th>
+                                <td>
+                                    <label class="softworld-checkbox-label">
+                                        <input type="checkbox" name="include_posts" value="1" <?php checked($settings['include_posts'], 1); ?>>
+                                        <span class="checkmark"></span>
+                                        Include Posts
+                                    </label><br>
+                                    <label class="softworld-checkbox-label">
+                                        <input type="checkbox" name="include_pages" value="1" <?php checked($settings['include_pages'], 1); ?>>
+                                        <span class="checkmark"></span>
+                                        Include Pages
+                                    </label>
+                                </td>
+                            </tr>
 
-                    <?php if (!empty($all_posts)): ?>
-                        <div class="sitemap-exclusion-section">
-                            <h3>Exclude Specific Posts</h3>
-                            
-                            <div class="exclusion-search-box">
-                                <input type="text" id="posts-search" placeholder="Search posts..." class="regular-text">
-                                <button type="button" class="button button-small" onclick="clearPostsSearch()">Clear</button>
-                            </div>
-                            
-                            <div class="exclusion-list-container">
-                                <?php if (!empty($all_posts)) : ?>
-                                    <div class="exclusion-checkbox-list">
-                                        <?php foreach ($all_posts as $post) : 
-                                            $is_excluded = in_array($post->ID, $settings['excluded_posts']);
-                                        ?>
-                                            <label class="exclusion-checkbox-item">
-                                                <input type="checkbox" 
-                                                    name="excluded_posts[]" 
-                                                    value="<?php echo $post->ID; ?>" 
-                                                    <?php checked($is_excluded); ?>
-                                                    class="post-checkbox"
-                                                    data-title="<?php echo esc_attr($post->post_title); ?>">
-                                                <span class="post-title"><?php echo esc_html($post->post_title); ?></span>
-                                                <span class="post-id">(ID: <?php echo $post->ID; ?>)</span>
+                            <?php if (!empty($taxonomies)): ?>
+                                <tr>
+                                    <th scope="row">Include Taxonomies</th>
+                                    <td class="softworld-checkbox-group">
+                                        <?php foreach ($taxonomies as $taxonomy):
+                                            $is_checked = in_array($taxonomy->name, (array) $settings['include_taxonomies']);
+                                            ?>
+                                            <label class="softworld-checkbox-label">
+                                                <input type="checkbox" name="include_taxonomies[]"
+                                                    value="<?php echo esc_attr($taxonomy->name); ?>" <?php checked($is_checked); ?>>
+                                                <span class="checkmark"></span>
+                                                <?php echo esc_html($taxonomy->labels->name); ?>
+                                                (<?php echo esc_html($taxonomy->name); ?>)
                                             </label>
                                         <?php endforeach; ?>
-                                    </div>
-                                <?php else : ?>
-                                    <p class="description">No posts found.</p>
-                                <?php endif; ?>
-                            </div>
-                            
-                            <div class="exclusion-actions">
-                                <button type="button" class="button button-small" onclick="selectAllPosts()">Select All</button>
-                                <button type="button" class="button button-small" onclick="deselectAllPosts()">Deselect All</button>
-                                <span class="selected-count">Selected: <span id="posts-selected-count">0</span></span>
-                            </div>
-                        </div>
-                    <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endif; ?>
 
-                    <?php if (!empty($all_pages)): ?>
-                        <div class="sitemap-exclusion-section">
-                            <h3>Exclude Specific Pages</h3>
-                            
-                            <div class="exclusion-search-box">
-                                <input type="text" id="pages-search" placeholder="Search pages..." class="regular-text">
-                                <button type="button" class="button button-small" onclick="clearPagesSearch()">Clear</button>
-                            </div>
-                            
-                            <div class="exclusion-list-container">
-                                <?php if (!empty($all_pages)) : ?>
-                                    <div class="exclusion-checkbox-list">
-                                        <?php foreach ($all_pages as $page) : 
-                                            $is_excluded = in_array($page->ID, $settings['excluded_pages']);
-                                        ?>
-                                            <label class="exclusion-checkbox-item">
-                                                <input type="checkbox" 
-                                                    name="excluded_pages[]" 
-                                                    value="<?php echo $page->ID; ?>" 
-                                                    <?php checked($is_excluded); ?>
-                                                    class="page-checkbox"
-                                                    data-title="<?php echo esc_attr($page->post_title); ?>">
-                                                <span class="page-title"><?php echo esc_html($page->post_title); ?></span>
-                                                <span class="page-id">(ID: <?php echo $page->ID; ?>)</span>
+                            <?php if (!empty($cpts)): ?>
+                                <tr>
+                                    <th scope="row">Include Custom Post Types</th>
+                                    <td class="softworld-checkbox-group">
+                                        <?php foreach ($cpts as $cpt):
+                                            $is_checked = in_array($cpt->name, (array) $settings['include_cpt']);
+                                            ?>
+                                            <label class="softworld-checkbox-label">
+                                                <input type="checkbox" name="include_cpt[]" value="<?php echo esc_attr($cpt->name); ?>"
+                                                    <?php checked($is_checked); ?>>
+                                                <span class="checkmark"></span>
+                                                <?php echo esc_html($cpt->labels->name); ?> (<?php echo esc_html($cpt->name); ?>)
                                             </label>
                                         <?php endforeach; ?>
-                                    </div>
-                                <?php else : ?>
-                                    <p class="description">No pages found.</p>
-                                <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endif; ?>
+                        </table>
+                    </div>
+
+                    <div class="softworld-sitemap-section">
+                        <h2>Exclusion Settings</h2>
+
+                        <div class="softworld-exclusion-panel">
+                            <h3>Exclude Posts</h3>
+                            <div class="softworld-search-box">
+                                <input type="text" id="softworld-post-search" placeholder="Search posts to exclude..."
+                                    class="softworld-search-input">
+                                <button type="button" id="softworld-search-post-btn"
+                                    class="button button-secondary">Search</button>
                             </div>
-                            
-                            <div class="exclusion-actions">
-                                <button type="button" class="button button-small" onclick="selectAllPages()">Select All</button>
-                                <button type="button" class="button button-small" onclick="deselectAllPages()">Deselect All</button>
-                                <span class="selected-count">Selected: <span id="pages-selected-count">0</span></span>
+                            <div id="softworld-post-results" class="softworld-search-results" style="display: none;"></div>
+
+                            <div class="softworld-excluded-items">
+                                <h4>Currently Excluded Posts</h4>
+                                <div id="softworld-excluded-posts" class="softworld-excluded-list">
+                                    <?php if (!empty($excluded_posts)): ?>
+                                        <?php foreach ($excluded_posts as $post): ?>
+                                            <div class="softworld-excluded-item" data-id="<?php echo $post->ID; ?>">
+                                                <span class="softworld-item-title"><?php echo esc_html($post->post_title); ?></span>
+                                                <span class="softworld-item-id">(ID: <?php echo $post->ID; ?>)</span>
+                                                <button type="button" class="softworld-remove-item">Remove</button>
+                                                <input type="hidden" name="excluded_posts[]" value="<?php echo $post->ID; ?>">
+                                            </div>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <p class="softworld-no-items">No posts excluded</p>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                         </div>
-                    <?php endif; ?>
-                </table>
 
-                <?php submit_button('Save Settings', 'primary', 'save_settings'); ?>
-            </form>
+                        <div class="softworld-exclusion-panel">
+                            <h3>Exclude Pages</h3>
+                            <div class="softworld-search-box">
+                                <input type="text" id="softworld-page-search" placeholder="Search pages to exclude..."
+                                    class="softworld-search-input">
+                                <button type="button" id="softworld-search-page-btn"
+                                    class="button button-secondary">Search</button>
+                            </div>
+                            <div id="softworld-page-results" class="softworld-search-results" style="display: none;"></div>
 
-            <h2>Current Status</h2>
-            <ul>
-                <li><?php echo $settings['include_posts'] ? '✔' : '✖'; ?> Posts are included</li>
-                <li><?php echo $settings['include_pages'] ? '✔' : '✖'; ?> Pages are included</li>
-                <li>✔ Sitemap updates automatically</li>
-                <li>✔ robots.txt includes sitemap link</li>
-                <li>Excluded posts: <?php echo count($settings['excluded_posts']); ?></li>
-                <li>Excluded pages: <?php echo count($settings['excluded_pages']); ?></li>
-            </ul>
+                            <div class="softworld-excluded-items">
+                                <h4>Currently Excluded Pages</h4>
+                                <div id="softworld-excluded-pages" class="softworld-excluded-list">
+                                    <?php if (!empty($excluded_pages)): ?>
+                                        <?php foreach ($excluded_pages as $page): ?>
+                                            <div class="softworld-excluded-item" data-id="<?php echo $page->ID; ?>">
+                                                <span class="softworld-item-title"><?php echo esc_html($page->post_title); ?></span>
+                                                <span class="softworld-item-id">(ID: <?php echo $page->ID; ?>)</span>
+                                                <button type="button" class="softworld-remove-item">Remove</button>
+                                                <input type="hidden" name="excluded_pages[]" value="<?php echo $page->ID; ?>">
+                                            </div>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <p class="softworld-no-items">No pages excluded</p>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-            <form method="post">
-                <?php submit_button('Regenerate Sitemap Rules', 'secondary', 'regenerate_rules'); ?>
-            </form>
+                    <?php submit_button('Save Settings', 'primary', 'save_settings'); ?>
+                </form>
+            </div>
+
+            <div class="softworld-sitemap-status">
+                <h2>Current Status</h2>
+                <div class="softworld-status-cards">
+                    <div class="softworld-status-card">
+                        <h3>Content Types</h3>
+                        <ul>
+                            <li><?php echo $settings['include_posts'] ? '✅' : '❌'; ?> Posts included</li>
+                            <li><?php echo $settings['include_pages'] ? '✅' : '❌'; ?> Pages included</li>
+                            <li>Taxonomies: <?php echo count((array) $settings['include_taxonomies']); ?> included</li>
+                            <li>Custom Post Types: <?php echo count((array) $settings['include_cpt']); ?> included</li>
+                        </ul>
+                    </div>
+                    <div class="softworld-status-card">
+                        <h3>Exclusions</h3>
+                        <ul>
+                            <li>Posts excluded: <?php echo count((array) $settings['excluded_posts']); ?></li>
+                            <li>Pages excluded: <?php echo count((array) $settings['excluded_pages']); ?></li>
+                        </ul>
+                    </div>
+                    <div class="softworld-status-card">
+                        <h3>System</h3>
+                        <ul>
+                            <li>✅ Sitemap updates automatically</li>
+                            <li>✅ robots.txt includes sitemap link</li>
+                            <li>✅ Rewrite rules active</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="softworld-sitemap-actions">
+                <form method="post">
+                    <?php submit_button('Regenerate Sitemap Rules', 'secondary', 'regenerate_rules'); ?>
+                </form>
+                <a href="<?php echo esc_url(home_url('/sitemap.xml')); ?>" target="_blank" class="button button-primary">View
+                    Sitemap</a>
+            </div>
         </div>
         <?php
     }

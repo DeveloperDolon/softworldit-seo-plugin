@@ -1,0 +1,233 @@
+.softworld-sitemap-container {
+    background: #fff;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.softworld-sitemap-section {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.softworld-sitemap-section:last-child {
+    border-bottom: none;
+}
+
+.softworld-checkbox-label {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    cursor: pointer;
+}
+
+.softworld-checkbox-label input[type="checkbox"] {
+    margin-right: 10px;
+}
+
+.softworld-checkbox-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 10px;
+}
+
+.softworld-exclusion-panel {
+    background: #f9f9f9;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    border: 1px solid #e1e1e1;
+}
+
+.softworld-search-box {
+    display: flex;
+    margin-bottom: 15px;
+}
+
+.softworld-search-input {
+    flex: 1;
+    margin-right: 10px;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.softworld-search-results {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-bottom: 15px;
+    background: #fff;
+}
+
+.softworld-results-header {
+    background: #f1f1f1;
+    padding: 8px 12px;
+    font-weight: bold;
+    border-bottom: 1px solid #ddd;
+}
+
+.softworld-result-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.softworld-result-item:last-child {
+    border-bottom: none;
+}
+
+.softworld-excluded-list {
+    min-height: 50px;
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    padding: 10px;
+    background: #fff;
+}
+
+.softworld-excluded-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px;
+    margin-bottom: 5px;
+    background: #f7f7f7;
+    border-radius: 3px;
+}
+
+.softworld-excluded-item:last-child {
+    margin-bottom: 0;
+}
+
+.softworld-item-title {
+    font-weight: 500;
+}
+
+.softworld-item-id {
+    color: #666;
+    font-size: 0.9em;
+    margin-left: 5px;
+}
+
+.softworld-remove-item {
+    background: #dc3232;
+    color: white;
+    border: none;
+    padding: 3px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.softworld-remove-item:hover {
+    background: #a00;
+}
+
+.softworld-loading, .softworld-no-results {
+    padding: 15px;
+    text-align: center;
+    color: #666;
+}
+
+.softworld-no-items {
+    padding: 15px;
+    text-align: center;
+    color: #999;
+    font-style: italic;
+}
+
+.softworld-sitemap-status {
+    margin-top: 30px;
+}
+
+.softworld-status-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 15px;
+}
+
+.softworld-status-card {
+    background: #f9f9f9;
+    padding: 15px;
+    border-radius: 5px;
+    border-left: 4px solid #0073aa;
+}
+
+.softworld-status-card h3 {
+    margin-top: 0;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 8px;
+}
+
+.softworld-status-card ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.softworld-sitemap-actions {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+}
+
+/* Custom checkbox styling */
+.softworld-checkbox-label {
+    position: relative;
+    padding-left: 35px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    font-size: 14px;
+    user-select: none;
+}
+
+.softworld-checkbox-label input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+}
+
+.checkmark {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 20px;
+    width: 20px;
+    background-color: #eee;
+    border-radius: 3px;
+}
+
+.softworld-checkbox-label:hover input ~ .checkmark {
+    background-color: #ccc;
+}
+
+.softworld-checkbox-label input:checked ~ .checkmark {
+    background-color: #0073aa;
+}
+
+.checkmark:after {
+    content: "";
+    position: absolute;
+    display: none;
+}
+
+.softworld-checkbox-label input:checked ~ .checkmark:after {
+    display: block;
+}
+
+.softworld-checkbox-label .checkmark:after {
+    left: 7px;
+    top: 3px;
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
