@@ -56,6 +56,7 @@ class Softworld_AI_SEO_Plugin
 
         add_action('wp_ajax_softworld_search_posts', [$this, 'ajax_search_posts']);
         add_action('wp_ajax_softworld_search_pages', [$this, 'ajax_search_pages']);
+        add_action('wp_ajax_softworld_manual_ping', [$this, 'ajax_manual_ping']);
     }
 
     public function init()
@@ -123,6 +124,23 @@ class Softworld_AI_SEO_Plugin
         }
 
         wp_send_json($results);
+    }
+
+    public function ajax_manual_ping()
+    {
+        check_ajax_referer('softworld_sitemap_nonce', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('You do not have permission to perform this action.');
+        }
+
+        $result = SoftworldIT_SEO_Sitemap::manual_ping_search_engines();
+
+        if ($result) {
+            wp_send_json_success('Search engines pinged successfully.');
+        } else {
+            wp_send_json_error('Failed to ping search engines.');
+        }
     }
 
     public function save_meta_box_data($post_id)
@@ -344,6 +362,8 @@ class Softworld_AI_SEO_Plugin
     /**
      * Render Sitemap Admin Page
      */
+    // Add this to your main plugin class
+// Add this to your main plugin class
     public function render_sitemap_admin()
     {
         // Define default settings
@@ -354,6 +374,19 @@ class Softworld_AI_SEO_Plugin
             'excluded_pages' => [],
             'include_taxonomies' => ['category', 'post_tag'],
             'include_cpt' => [],
+            'priority_posts' => 0.7,
+            'priority_pages' => 0.8,
+            'priority_taxonomies' => 0.5,
+            'priority_cpt' => 0.6,
+            'frequency_posts' => 'weekly',
+            'frequency_pages' => 'monthly',
+            'frequency_taxonomies' => 'weekly',
+            'frequency_cpt' => 'weekly',
+            'ping_search_engines' => 1,
+            'ping_google' => 1,
+            'ping_bing' => 1,
+            'ping_yandex' => 0,
+            'exclude_images' => 0,
         ];
 
         // Get current settings with proper defaults
@@ -375,6 +408,19 @@ class Softworld_AI_SEO_Plugin
                     'excluded_pages' => isset($_POST['excluded_pages']) ? array_map('intval', $_POST['excluded_pages']) : [],
                     'include_taxonomies' => isset($_POST['include_taxonomies']) ? $_POST['include_taxonomies'] : [],
                     'include_cpt' => isset($_POST['include_cpt']) ? $_POST['include_cpt'] : [],
+                    'priority_posts' => isset($_POST['priority_posts']) ? floatval($_POST['priority_posts']) : 0.7,
+                    'priority_pages' => isset($_POST['priority_pages']) ? floatval($_POST['priority_pages']) : 0.8,
+                    'priority_taxonomies' => isset($_POST['priority_taxonomies']) ? floatval($_POST['priority_taxonomies']) : 0.5,
+                    'priority_cpt' => isset($_POST['priority_cpt']) ? floatval($_POST['priority_cpt']) : 0.6,
+                    'frequency_posts' => isset($_POST['frequency_posts']) ? sanitize_text_field($_POST['frequency_posts']) : 'weekly',
+                    'frequency_pages' => isset($_POST['frequency_pages']) ? sanitize_text_field($_POST['frequency_pages']) : 'monthly',
+                    'frequency_taxonomies' => isset($_POST['frequency_taxonomies']) ? sanitize_text_field($_POST['frequency_taxonomies']) : 'weekly',
+                    'frequency_cpt' => isset($_POST['frequency_cpt']) ? sanitize_text_field($_POST['frequency_cpt']) : 'weekly',
+                    'ping_search_engines' => isset($_POST['ping_search_engines']) ? 1 : 0,
+                    'ping_google' => isset($_POST['ping_google']) ? 1 : 0,
+                    'ping_bing' => isset($_POST['ping_bing']) ? 1 : 0,
+                    'ping_yandex' => isset($_POST['ping_yandex']) ? 1 : 0,
+                    'exclude_images' => isset($_POST['exclude_images']) ? 1 : 0,
                 ];
 
                 // Ensure arrays are properly formatted
@@ -386,6 +432,10 @@ class Softworld_AI_SEO_Plugin
                 update_option('softworld_sitemap_settings', $new_settings);
                 $settings = $new_settings; // Update current settings for display
                 echo '<div class="updated notice"><p>Sitemap settings saved successfully.</p></div>';
+            } elseif (isset($_POST['ping_now'])) {
+                // Manually ping search engines
+                SoftworldIT_SEO_Sitemap::manual_ping_search_engines();
+                echo '<div class="updated notice"><p>Search engines pinged successfully.</p></div>';
             }
         }
 
@@ -414,6 +464,35 @@ class Softworld_AI_SEO_Plugin
             'orderby' => 'title',
             'order' => 'ASC'
         ]) : [];
+
+        // Priority options
+        $priority_options = [
+            '1.0' => '1.0 - Highest',
+            '0.9' => '0.9',
+            '0.8' => '0.8 - High',
+            '0.7' => '0.7',
+            '0.6' => '0.6 - Medium',
+            '0.5' => '0.5',
+            '0.4' => '0.4 - Low',
+            '0.3' => '0.3',
+            '0.2' => '0.2',
+            '0.1' => '0.1 - Lowest',
+            '0.0' => '0.0 - Excluded',
+        ];
+
+        // Frequency options
+        $frequency_options = [
+            'always' => 'Always',
+            'hourly' => 'Hourly',
+            'daily' => 'Daily',
+            'weekly' => 'Weekly',
+            'monthly' => 'Monthly',
+            'yearly' => 'Yearly',
+            'never' => 'Never',
+        ];
+
+        // Get ping log
+        $ping_log = SoftworldIT_SEO_Sitemap::get_ping_log();
 
         // Enqueue scripts and styles for the improved UI
         wp_enqueue_script('jquery-ui-autocomplete');
@@ -499,6 +578,171 @@ class Softworld_AI_SEO_Plugin
                     </div>
 
                     <div class="softworld-sitemap-section">
+                        <h2>Priority & Frequency Settings</h2>
+                        <table class="form-table">
+                            <tr>
+                                <th scope="row">Posts Priority</th>
+                                <td>
+                                    <select name="priority_posts" class="regular-text">
+                                        <?php foreach ($priority_options as $value => $label): ?>
+                                            <option value="<?php echo esc_attr($value); ?>" <?php selected($settings['priority_posts'], $value); ?>>
+                                                <?php echo esc_html($label); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Posts Frequency</th>
+                                <td>
+                                    <select name="frequency_posts" class="regular-text">
+                                        <?php foreach ($frequency_options as $value => $label): ?>
+                                            <option value="<?php echo esc_attr($value); ?>" <?php selected($settings['frequency_posts'], $value); ?>>
+                                                <?php echo esc_html($label); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Pages Priority</th>
+                                <td>
+                                    <select name="priority_pages" class="regular-text">
+                                        <?php foreach ($priority_options as $value => $label): ?>
+                                            <option value="<?php echo esc_attr($value); ?>" <?php selected($settings['priority_pages'], $value); ?>>
+                                                <?php echo esc_html($label); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Pages Frequency</th>
+                                <td>
+                                    <select name="frequency_pages" class="regular-text">
+                                        <?php foreach ($frequency_options as $value => $label): ?>
+                                            <option value="<?php echo esc_attr($value); ?>" <?php selected($settings['frequency_pages'], $value); ?>>
+                                                <?php echo esc_html($label); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Taxonomies Priority</th>
+                                <td>
+                                    <select name="priority_taxonomies" class="regular-text">
+                                        <?php foreach ($priority_options as $value => $label): ?>
+                                            <option value="<?php echo esc_attr($value); ?>" <?php selected($settings['priority_taxonomies'], $value); ?>>
+                                                <?php echo esc_html($label); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Taxonomies Frequency</th>
+                                <td>
+                                    <select name="frequency_taxonomies" class="regular-text">
+                                        <?php foreach ($frequency_options as $value => $label): ?>
+                                            <option value="<?php echo esc_attr($value); ?>" <?php selected($settings['frequency_taxonomies'], $value); ?>>
+                                                <?php echo esc_html($label); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Custom Post Types Priority</th>
+                                <td>
+                                    <select name="priority_cpt" class="regular-text">
+                                        <?php foreach ($priority_options as $value => $label): ?>
+                                            <option value="<?php echo esc_attr($value); ?>" <?php selected($settings['priority_cpt'], $value); ?>>
+                                                <?php echo esc_html($label); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Custom Post Types Frequency</th>
+                                <td>
+                                    <select name="frequency_cpt" class="regular-text">
+                                        <?php foreach ($frequency_options as $value => $label): ?>
+                                            <option value="<?php echo esc_attr($value); ?>" <?php selected($settings['frequency_cpt'], $value); ?>>
+                                                <?php echo esc_html($label); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="softworld-sitemap-section">
+                        <h2>Search Engine Ping Settings</h2>
+                        <table class="form-table">
+                            <tr>
+                                <th scope="row">Ping Search Engines</th>
+                                <td>
+                                    <label class="softworld-checkbox-label">
+                                        <input type="checkbox" name="ping_search_engines" value="1" <?php checked($settings['ping_search_engines'], 1); ?>>
+                                        <span class="checkmark"></span>
+                                        Automatically ping search engines when content is updated
+                                    </label>
+                                    <p class="description">When enabled, search engines will be notified automatically when you
+                                        publish or update content.</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Search Engines to Ping</th>
+                                <td>
+                                    <label class="softworld-checkbox-label">
+                                        <input type="checkbox" name="ping_google" value="1" <?php checked($settings['ping_google'], 1); ?>>
+                                        <span class="checkmark"></span>
+                                        Google
+                                    </label><br>
+                                    <label class="softworld-checkbox-label">
+                                        <input type="checkbox" name="ping_bing" value="1" <?php checked($settings['ping_bing'], 1); ?>>
+                                        <span class="checkmark"></span>
+                                        Bing
+                                    </label><br>
+                                    <label class="softworld-checkbox-label">
+                                        <input type="checkbox" name="ping_yandex" value="1" <?php checked($settings['ping_yandex'], 1); ?>>
+                                        <span class="checkmark"></span>
+                                        Yandex
+                                    </label>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Manual Ping</th>
+                                <td>
+                                    <button type="submit" name="ping_now" class="button button-secondary">Ping Search Engines
+                                        Now</button>
+                                    <p class="description">Manually notify search engines about your sitemap updates.</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="softworld-sitemap-section">
+                        <h2>Image Settings</h2>
+                        <table class="form-table">
+                            <tr>
+                                <th scope="row">Exclude Images</th>
+                                <td>
+                                    <label class="softworld-checkbox-label">
+                                        <input type="checkbox" name="exclude_images" value="1" <?php checked($settings['exclude_images'], 1); ?>>
+                                        <span class="checkmark"></span>
+                                        Exclude images from sitemap
+                                    </label>
+                                    <p class="description">When enabled, images will not be included in your sitemap.</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="softworld-sitemap-section">
                         <h2>Exclusion Settings</h2>
 
                         <div class="softworld-exclusion-panel">
@@ -577,28 +821,67 @@ class Softworld_AI_SEO_Plugin
                         </ul>
                     </div>
                     <div class="softworld-status-card">
-                        <h3>Exclusions</h3>
+                        <h3>Priority Settings</h3>
                         <ul>
-                            <li>Posts excluded: <?php echo count((array) $settings['excluded_posts']); ?></li>
-                            <li>Pages excluded: <?php echo count((array) $settings['excluded_pages']); ?></li>
+                            <li>Posts: <?php echo $settings['priority_posts']; ?></li>
+                            <li>Pages: <?php echo $settings['priority_pages']; ?></li>
+                            <li>Taxonomies: <?php echo $settings['priority_taxonomies']; ?></li>
+                            <li>Custom Post Types: <?php echo $settings['priority_cpt']; ?></li>
                         </ul>
                     </div>
                     <div class="softworld-status-card">
-                        <h3>System</h3>
+                        <h3>Frequency Settings</h3>
                         <ul>
-                            <li>✅ Sitemap updates automatically</li>
-                            <li>✅ robots.txt includes sitemap link</li>
-                            <li>✅ Rewrite rules active</li>
+                            <li>Posts: <?php echo ucfirst($settings['frequency_posts']); ?></li>
+                            <li>Pages: <?php echo ucfirst($settings['frequency_pages']); ?></li>
+                            <li>Taxonomies: <?php echo ucfirst($settings['frequency_taxonomies']); ?></li>
+                            <li>Custom Post Types: <?php echo ucfirst($settings['frequency_cpt']); ?></li>
+                        </ul>
+                    </div>
+                    <div class="softworld-status-card">
+                        <h3>Ping Settings</h3>
+                        <ul>
+                            <li>Auto Ping: <?php echo $settings['ping_search_engines'] ? '✅' : '❌'; ?></li>
+                            <li>Google: <?php echo $settings['ping_google'] ? '✅' : '❌'; ?></li>
+                            <li>Bing: <?php echo $settings['ping_bing'] ? '✅' : '❌'; ?></li>
+                            <li>Yandex: <?php echo $settings['ping_yandex'] ? '✅' : '❌'; ?></li>
+                            <li>Images: <?php echo $settings['exclude_images'] ? '❌ Excluded' : '✅ Included'; ?></li>
                         </ul>
                     </div>
                 </div>
             </div>
 
+            <?php if (!empty($ping_log)): ?>
+                <div class="softworld-sitemap-section">
+                    <h2>Ping Log</h2>
+                    <div class="softworld-ping-log">
+                        <table class="wp-list-table widefat fixed striped">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Search Engine</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach (array_reverse($ping_log) as $log_entry): ?>
+                                    <tr>
+                                        <td><?php echo date('Y-m-d H:i:s', strtotime($log_entry['time'])); ?></td>
+                                        <td><?php echo ucfirst($log_entry['engine']); ?></td>
+                                        <td><?php echo ucfirst($log_entry['status']); ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            <?php endif; ?>
+
             <div class="softworld-sitemap-actions">
-                <form method="post" >
+                <form method="post">
                     <?php submit_button('Regenerate Sitemap Rules', 'secondary', 'regenerate_rules'); ?>
                 </form>
-                <a style="margin-top: 7px;" href="<?php echo esc_url(home_url('/sitemap.xml')); ?>" target="_blank" class="button button-primary">View
+                <a href="<?php echo esc_url(home_url('/sitemap.xml')); ?>" target="_blank" class="button button-primary">View
                     Sitemap</a>
             </div>
         </div>

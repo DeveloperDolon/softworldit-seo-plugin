@@ -232,3 +232,165 @@
     border-width: 0 2px 2px 0;
     transform: rotate(45deg);
 }
+
+/* Priority and Frequency Settings */
+.softworld-priority-freq-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 15px 0;
+}
+
+.softworld-priority-freq-table th,
+.softworld-priority-freq-table td {
+    padding: 10px;
+    border: 1px solid #ddd;
+    text-align: left;
+}
+
+.softworld-priority-freq-table th {
+    background-color: #f5f5f5;
+    font-weight: 600;
+}
+
+.softworld-priority-slider {
+    width: 100%;
+    margin: 10px 0;
+}
+
+.softworld-priority-value {
+    display: inline-block;
+    width: 40px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.softworld-priority-indicator {
+    display: inline-block;
+    width: 100px;
+    height: 10px;
+    background: linear-gradient(to right, #ff4b4b, #ffb74d, #a5d6a7, #4caf50);
+    border-radius: 5px;
+    margin: 0 10px;
+    position: relative;
+}
+
+.softworld-priority-indicator::after {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: calc(var(--priority, 0.5) * 100px - 5px);
+    width: 10px;
+    height: 16px;
+    background: #333;
+    border-radius: 2px;
+}
+
+/* Responsive tables */
+@media screen and (max-width: 782px) {
+    .softworld-priority-freq-table {
+        display: block;
+        overflow-x: auto;
+    }
+}
+
+/* Tooltip for priority information */
+.softworld-tooltip {
+    position: relative;
+    display: inline-block;
+    margin-left: 5px;
+    cursor: help;
+}
+
+.softworld-tooltip .softworld-tooltip-text {
+    visibility: hidden;
+    width: 200px;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -100px;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.softworld-tooltip:hover .softworld-tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Ping Log Table */
+.softworld-ping-log {
+    margin-top: 20px;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.04);
+    background: #fff;
+}
+
+.softworld-ping-log table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.softworld-ping-log th {
+    font-weight: 600;
+    padding: 8px 10px;
+}
+
+.softworld-ping-log td {
+    padding: 8px 10px;
+    vertical-align: top;
+}
+
+/* Manual Ping Button */
+.softworld-manual-ping {
+    margin-top: 10px;
+}
+
+/* Image Settings Section */
+.softworld-image-settings {
+    background: #f9f9f9;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    border: 1px solid #e1e1e1;
+}
+
+.softworld-image-settings h3 {
+    margin-top: 0;
+}
+
+/* Search Engine Ping Status */
+.softworld-ping-status {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.softworld-ping-status-item {
+    background: #f7f7f7;
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid #e1e1e1;
+}
+
+.softworld-ping-status-item.active {
+    background: #e7f4e4;
+    border-color: #46b450;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 782px) {
+    .softworld-ping-log {
+        overflow-x: auto;
+    }
+    
+    .softworld-ping-log table {
+        min-width: 500px;
+    }
+}
