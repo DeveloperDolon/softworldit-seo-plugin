@@ -32,13 +32,12 @@ require_once plugin_dir_path(__FILE__) . 'includes/crawl-optimizer.php';
 // main plugin class
 class Softworld_AI_SEO_Plugin
 {
-   private $role_manager;
+    private $role_manager;
     private $seo_tools;
     private $robots_txt_editor;
     private $redirect_manager;
     private $not_found_logger;
     private $crawl_optimizer;
-
 
     public function __construct()
     {
@@ -65,7 +64,6 @@ class Softworld_AI_SEO_Plugin
         $this->not_found_logger = new Softworld_AI_SEO_Not_Found_Logger();
         // Initialize Crawl Optimizer
         $this->crawl_optimizer = new Softworld_AI_SEO_Crawl_Optimizer();
-
 
         add_action('wp_ajax_softworld_search_posts', [$this, 'ajax_search_posts']);
         add_action('wp_ajax_softworld_search_pages', [$this, 'ajax_search_pages']);
