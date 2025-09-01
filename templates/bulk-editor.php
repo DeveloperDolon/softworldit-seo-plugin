@@ -19,7 +19,7 @@
         </div>
     </form>
    
-    <?php if ($posts_query->have_posts()) : ?>
+    <?php if (!empty($posts_query->posts)) : ?>
         <form id="softworld-bulk-seo-form">
             <?php wp_nonce_field('softworld_bulk_seo_nonce', 'softworld_bulk_nonce'); ?>
             <table class="wp-list-table widefat fixed striped posts">
@@ -31,27 +31,38 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <?php while ($posts_query->have_posts()) : $posts_query->the_post(); ?>
+                    <?php foreach ($posts_query->posts as $post) : 
+                        // Set up post data
+                        setup_postdata($post);
+                    ?>
                         <tr>
                             <td>
-                                <strong><?php the_title(); ?></strong>
+                                <strong><?php echo esc_html($post->post_title); ?></strong>
                                 <div class="row-actions">
-                                    <span class="edit"><a href="<?php echo get_edit_post_link(); ?>"><?php _e('Edit', 'softworld-ai-seo'); ?></a></span> |
-                                    <span class="view"><a href="<?php the_permalink(); ?>" target="_blank"><?php _e('View', 'softworld-ai-seo'); ?></a></span>
+                                    <span class="edit">
+                                        <a href="<?php echo get_edit_post_link($post->ID); ?>">
+                                            <?php _e('Edit', 'softworld-ai-seo'); ?>
+                                        </a>
+                                    </span> |
+                                    <span class="view">
+                                        <a href="<?php echo get_permalink($post->ID); ?>" target="_blank">
+                                            <?php _e('View', 'softworld-ai-seo'); ?>
+                                        </a>
+                                    </span>
                                 </div>
                             </td>
                             <td>
-                                <textarea name="seo_data[<?php the_ID(); ?>][title]" rows="2" class="large-text"><?php
-                                    echo esc_textarea(get_post_meta(get_the_ID(), '_softworld_ai_seo_title', true));
+                                <textarea name="seo_data[<?php echo $post->ID; ?>][title]" rows="2" class="large-text"><?php
+                                    echo esc_textarea(get_post_meta($post->ID, '_softworld_ai_seo_title', true));
                                 ?></textarea>
                             </td>
                             <td>
-                                <textarea name="seo_data[<?php the_ID(); ?>][description]" rows="3" class="large-text"><?php
-                                    echo esc_textarea(get_post_meta(get_the_ID(), '_softworld_ai_seo_description', true));
+                                <textarea name="seo_data[<?php echo $post->ID; ?>][description]" rows="3" class="large-text"><?php
+                                    echo esc_textarea(get_post_meta($post->ID, '_softworld_ai_seo_description', true));
                                 ?></textarea>
                             </td>
                         </tr>
-                    <?php endwhile; ?>
+                    <?php endforeach; ?>
                 </tbody>
             </table>
            
@@ -86,8 +97,6 @@
             <p><?php _e('No posts found for the selected post type.', 'softworld-ai-seo'); ?></p>
         </div>
     <?php endif; ?>
-   
-    <?php wp_reset_postdata(); ?>
 </div>
 
 <script>

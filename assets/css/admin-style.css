@@ -44,3 +44,17 @@
     font-size: 0.9em;
     margin-left: 5px;
 }
+
+/* Add custom styles for your admin pages */
+#col-left {
+    width: 300px;
+    float: left;
+}
+#col-right {
+    float: right;
+    width: calc(100% - 320px);
+}
+.form-field input[type="url"],
+.form-field input[type="text"] {
+    width: 100%;
+}

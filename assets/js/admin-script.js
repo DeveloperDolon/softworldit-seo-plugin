@@ -116,3 +116,14 @@ function clearPostsSearch() {
 function clearPagesSearch() {
     jQuery('#pages-search').val('').trigger('keyup');
 }
+
+// Add any custom javascript for your admin pages here
+(function($) {
+    'use strict';
+    // Example: Confirmation for delete actions
+    $(document).ready(function() {
+        $('.delete-link').on('click', function() {
+            return confirm('Are you sure you want to delete this item?');
+        });
+    });
+})(jQuery);

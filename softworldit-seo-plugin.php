@@ -25,13 +25,19 @@ require_once plugin_dir_path(__FILE__) . 'includes/sitemap.php';
 require_once plugin_dir_path(__FILE__) . 'includes/role-manager.php';
 require_once plugin_dir_path(__FILE__) . 'includes/seo-tools.php';
 require_once plugin_dir_path(__FILE__) . 'includes/robots-txt-editor.php'; // Add this line
+require_once plugin_dir_path(__FILE__) . 'includes/redirect-manager.php';
+require_once plugin_dir_path(__FILE__) . 'includes/not-found-logger.php';
+require_once plugin_dir_path(__FILE__) . 'includes/crawl-optimizer.php';
 
 // main plugin class
 class Softworld_AI_SEO_Plugin
 {
-    private $role_manager;
+   private $role_manager;
     private $seo_tools;
-    private $robots_txt_editor; // Add this property
+    private $robots_txt_editor;
+    private $redirect_manager;
+    private $not_found_logger;
+    private $crawl_optimizer;
 
 
     public function __construct()
@@ -53,6 +59,13 @@ class Softworld_AI_SEO_Plugin
         $this->seo_tools = new Softworld_AI_SEO_Tools('softworld-ai-seo');
         // Initialize Robots.txt Editor
         $this->robots_txt_editor = new Softworld_AI_SEO_Robots_Txt_Editor();
+        // Initialize Redirect Manager
+        $this->redirect_manager = new Softworld_AI_SEO_Redirect_Manager();
+        // Initialize 404 Logger
+        $this->not_found_logger = new Softworld_AI_SEO_Not_Found_Logger();
+        // Initialize Crawl Optimizer
+        $this->crawl_optimizer = new Softworld_AI_SEO_Crawl_Optimizer();
+
 
         add_action('wp_ajax_softworld_search_posts', [$this, 'ajax_search_posts']);
         add_action('wp_ajax_softworld_search_pages', [$this, 'ajax_search_pages']);
@@ -274,6 +287,10 @@ class Softworld_AI_SEO_Plugin
     {
         // Register sitemap rewrite rules on activation
         SoftworldIT_SEO_Sitemap::add_rewrite();
+        // Add custom table for redirects
+        Softworld_AI_SEO_Redirect_Manager::create_redirects_table();
+        // Add custom table for 404 logs
+        Softworld_AI_SEO_Not_Found_Logger::create_log_table();
 
         // Create custom roles
         $this->create_custom_roles();
@@ -329,6 +346,34 @@ class Softworld_AI_SEO_Plugin
             'manage_options',
             'softworldit-seo-settings',
             array($this, 'render_ai_settings_admin')
+        );
+
+         // Add submenus for the new features
+        add_submenu_page(
+            'softworld-ai-seo',
+            __('Redirects', 'softworld-ai-seo'),
+            __('Redirects', 'softworld-ai-seo'),
+            'manage_options',
+            'softworld-ai-seo-redirects',
+            [$this->redirect_manager, 'render_admin_page']
+        );
+
+        add_submenu_page(
+            'softworld-ai-seo',
+            __('404 Log', 'softworld-ai-seo'),
+            __('404 Log', 'softworld-ai-seo'),
+            'manage_options',
+            'softworld-ai-seo-404-log',
+            [$this->not_found_logger, 'render_admin_page']
+        );
+
+        add_submenu_page(
+            'softworld-ai-seo',
+            __('Crawl Optimization', 'softworld-ai-seo'),
+            __('Crawl Optimization', 'softworld-ai-seo'),
+            'manage_options',
+            'softworld-ai-seo-crawl-optimizer',
+            [$this->crawl_optimizer, 'render_admin_page']
         );
     }
 
@@ -881,7 +926,8 @@ class Softworld_AI_SEO_Plugin
                 <form method="post">
                     <?php submit_button('Regenerate Sitemap Rules', 'secondary', 'regenerate_rules'); ?>
                 </form>
-                <a href="<?php echo esc_url(home_url('/sitemap.xml')); ?>" style="margin-top: 6px;" target="_blank" class="button button-primary">View
+                <a href="<?php echo esc_url(home_url('/sitemap.xml')); ?>" style="margin-top: 6px;" target="_blank"
+                    class="button button-primary">View
                     Sitemap</a>
             </div>
         </div>

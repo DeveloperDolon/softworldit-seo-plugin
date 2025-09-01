@@ -28,17 +28,15 @@ class Softworld_AI_SEO_Tools
 
     public function add_bulk_editor_page()
     {
-        error_log('Registering Bulk Editor submenu: ' . $this->plugin_slug . '-bulk-editor');
         $hook = add_submenu_page(
-            $this->plugin_slug,
-            __('Bulk SEO Editor', 'softworld-ai-seo'),
-            __('Bulk Editor', 'softworld-ai-seo'),
-            $this->capability,
-            $this->plugin_slug . '-bulk-editor',
-            array($this, 'render_bulk_editor_page')
+            $this->plugin_slug, // Parent slug
+            __('Bulk SEO Editor', 'softworld-ai-seo'), // Page title
+            __('Bulk Editor', 'softworld-ai-seo'), // Menu title
+            $this->capability, // Capability
+            $this->plugin_slug . '-bulk-editor', // Menu slug
+            array($this, 'render_bulk_editor_page') // Callback
         );
 
-        // Load scripts only on this page
         if ($hook) {
             add_action('load-' . $hook, array($this, 'load_bulk_editor_assets'));
         }
@@ -49,12 +47,11 @@ class Softworld_AI_SEO_Tools
         add_action('admin_enqueue_scripts', array($this, 'enqueue_bulk_editor_scripts'));
     }
 
-    // Corrected enqueue_bulk_editor_scripts method
     public function enqueue_bulk_editor_scripts()
     {
         wp_enqueue_script(
             'softworld-bulk-editor',
-            AI_SEO_PLUGIN_URL . 'assets/js/bulk-editor.js', // Use the defined constant
+            AI_SEO_PLUGIN_URL . 'assets/js/bulk-editor.js',
             array('jquery'),
             '1.0',
             true
@@ -72,45 +69,75 @@ class Softworld_AI_SEO_Tools
             wp_die(__('You do not have sufficient permissions to access this page.', 'softworld-ai-seo'));
         }
 
-        // Get post types for filtering
+        // Get all public post types
+        $all_post_types = get_post_types(array('public' => true), 'names');
         $post_types = get_post_types(array('public' => true), 'objects');
 
-        // Get posts for bulk editing (with pagination)
+        // Get current page and filter values
         $paged = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
         $posts_per_page = 20;
         $post_type_filter = isset($_GET['post_type']) ? sanitize_text_field($_GET['post_type']) : 'post';
 
-        $query_args = array(
+        // Validate post type filter
+        if (!in_array($post_type_filter, $all_post_types)) {
+            $post_type_filter = 'post';
+        }
+
+        // Calculate offset for pagination
+        $offset = ($paged - 1) * $posts_per_page;
+
+        // Get posts using get_posts (more reliable than WP_Query for admin)
+        $posts_args = array(
             'post_type' => $post_type_filter,
-            'posts_per_page' => $posts_per_page,
-            'paged' => $paged,
-            'post_status' => array('publish', 'pending', 'draft', 'future')
+            'post_status' => array('publish', 'pending', 'draft', 'future'),
+            'numberposts' => $posts_per_page,
+            'offset' => $offset,
+            'orderby' => 'date',
+            'order' => 'DESC',
+            'suppress_filters' => false
         );
 
-        $posts_query = new WP_Query($query_args);
+        $posts = get_posts($posts_args);
 
-        // Extract variables for the template
+        // Get total count for pagination
+        $count_args = array(
+            'post_type' => $post_type_filter,
+            'post_status' => array('publish', 'pending', 'draft', 'future'),
+            'numberposts' => -1,
+            'fields' => 'ids'
+        );
+
+        $total_posts = count(get_posts($count_args));
+        $max_num_pages = ceil($total_posts / $posts_per_page);
+
+        // Create a mock query object for template compatibility
+        $posts_query = new stdClass();
+        $posts_query->posts = $posts;
+        $posts_query->post_count = count($posts);
+        $posts_query->max_num_pages = $max_num_pages;
+        $posts_query->found_posts = $total_posts;
+
+        // Set up global post data for the template
+        global $post;
+        $original_post = $post;
+
+        // Slugs
         $plugin_slug = $this->plugin_slug;
         $page_slug = $plugin_slug . '-bulk-editor';
 
-        // Get the current URL with parameters
-        $current_url = admin_url('admin.php?page=' . $page_slug);
-        if (!empty($post_type_filter) && $post_type_filter !== 'post') {
-            $current_url .= '&post_type=' . $post_type_filter;
-        }
+        // Template path
+        $template_path = plugin_dir_path(__FILE__) . '../templates/bulk-editor.php';
 
-        // Calculate the correct template path
-        $template_path = dirname(plugin_dir_path(__FILE__)) . '/templates/bulk-editor.php';
-
-        // Render the bulk editor template
         if (file_exists($template_path)) {
-            // Pass all variables to the template
             include $template_path;
         } else {
             echo '<div class="error"><p>' .
                 __('Template file not found! Please create it at:', 'softworld-ai-seo') .
                 ' ' . esc_html($template_path) . '</p></div>';
         }
+
+        // Restore original post data
+        $post = $original_post;
     }
 
     public function handle_bulk_update()
