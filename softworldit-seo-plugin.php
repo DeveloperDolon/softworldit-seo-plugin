@@ -23,13 +23,18 @@ define('AI_SEO_VERSION', '1.0.0');
 // Include sitemap feature
 require_once plugin_dir_path(__FILE__) . 'includes/sitemap.php';
 require_once plugin_dir_path(__FILE__) . 'includes/role-manager.php';
+require_once plugin_dir_path(__FILE__) . 'includes/seo-tools.php'; 
+require_once plugin_dir_path(__FILE__) . 'includes/robots-txt-editor.php'; // Add this line
 
 // main plugin class
 class Softworld_AI_SEO_Plugin
 {
-   private $role_manager;
+    private $role_manager;
+    private $seo_tools;
+    private $robots_txt_editor; // Add this property
     
-    public function __construct()
+    
+     public function __construct()
     {
         add_action('init', array($this, 'init'));
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
@@ -43,7 +48,11 @@ class Softworld_AI_SEO_Plugin
         register_deactivation_hook(__FILE__, array($this, 'deactivate'));
         
         // Initialize Role Manager
-        $this->role_manager = new Softworld_AI_SEO_Role_Manager('softworld-seo');
+        $this->role_manager = new Softworld_AI_SEO_Role_Manager('softworld-ai-seo');
+        // Initialize SEO Tools
+        $this->seo_tools = new Softworld_AI_SEO_Tools('softworld-ai-seo');
+        // Initialize Robots.txt Editor
+        $this->robots_txt_editor = new Softworld_AI_SEO_Robots_Txt_Editor();
     }
 
    public function init()
@@ -210,7 +219,7 @@ class Softworld_AI_SEO_Plugin
             'Softworld SEO',                    // Page title
             'Softworld SEO',                    // Menu title
             'manage_options',                   // Capability
-            'softworld-seo',                    // Menu slug
+            'softworld-ai-seo',                    // Menu slug
             array($this, 'render_dashboard'),   // Callback
             'dashicons-chart-area',             // Icon
             80                                  // Position
@@ -218,13 +227,53 @@ class Softworld_AI_SEO_Plugin
 
         // Add Sitemap submenu
         add_submenu_page(
-            'softworld-seo',
+            'softworld-ai-seo',
             'XML Sitemap',
             'XML Sitemap',
             'manage_options',
             'softworldit-seo-sitemap',
             array($this, 'render_sitemap_admin')
         );
+
+          // Add Robots.txt submenu
+        add_submenu_page(
+            'softworld-ai-seo',
+            'Robots.txt Editor',
+            'Robots.txt Editor',
+            'manage_options',
+            'softworldit-seo-robots',
+            array($this, 'render_robots_admin')
+        );
+
+        add_submenu_page(
+            'softworld-ai-seo',
+            'AI Settings',
+            'AI Settings',
+            'manage_options',
+            'softworldit-seo-settings',
+            array($this, 'render_ai_settings_admin')
+        );
+    }
+
+    public function render_robots_admin()
+    {
+        $this->robots_txt_editor->render_admin_page();
+    }
+
+    public function render_ai_settings_admin()
+    {
+        ?>
+        <div class="wrap">
+            <h1>AI Settings</h1>
+            <form method="post" action="options.php">
+                <?php
+                    settings_fields('softworld_ai_settings_group');
+                    do_settings_sections('softworldit-seo-settings');
+                    submit_button();
+                ?>
+            </form>
+        </div>
+        <?php
     }
 
     public function render_dashboard()

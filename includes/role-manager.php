@@ -14,7 +14,7 @@ class Softworld_AI_SEO_Role_Manager
     private $capability;
     private $parent_slug;
 
-    public function __construct($parent_slug = 'softworld-seo')
+    public function __construct($parent_slug = 'softworld-ai-seo')
     {
         $this->capability = 'manage_options';
         $this->parent_slug = $parent_slug;
