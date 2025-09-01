@@ -881,7 +881,7 @@ class Softworld_AI_SEO_Plugin
                 <form method="post">
                     <?php submit_button('Regenerate Sitemap Rules', 'secondary', 'regenerate_rules'); ?>
                 </form>
-                <a href="<?php echo esc_url(home_url('/sitemap.xml')); ?>" target="_blank" class="button button-primary">View
+                <a href="<?php echo esc_url(home_url('/sitemap.xml')); ?>" style="margin-top: 6px;" target="_blank" class="button button-primary">View
                     Sitemap</a>
             </div>
         </div>
