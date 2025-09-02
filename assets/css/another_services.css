@@ -1,0 +1,25 @@
+.ayc-card{
+    margin-top:15px; padding:10px; border:1px solid #ddd; background:#f9f9f9; border-radius:6px;
+  }
+  .ayc-h4{ margin:0 0 8px; }
+  .ayc-hr{ border:0; border-top:1px solid #eee; margin:8px 0; }
+  .ayc-row{ margin-bottom:8px; }
+  .ayc-metric{ margin:0; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .ayc-badge{ padding:2px 6px; border-radius:4px; font-weight:600; }
+  .ayc-badge.good{ background:#c3cfc6; color:#155724; }
+  .ayc-badge.warn{ background:#fff3cd; color:#856404; }
+  .ayc-badge.bad{  background:#f8d7da; color:#721c24; }
+  .ayc-suggest-btn{ margin-left:auto; font-size:12px; line-height:1; }
+  .ayc-tooltip-msg{ margin-top:4px; }
+  .ayc-note{ color:#555; font-size:12px; display:inline-block; }
+  .ayc-override{ color:#666; font-size:11px; margin-left:4px; }
+  .ayc-inline{ display:flex; gap:6px; align-items:flex-start; margin-top:4px; }
+  .ayc-inline textarea{ width:55%; min-width:220px; }
+  .ayc-inline select{ min-width:140px; }
+  .ayc-compact{ margin:2px 0; }
+  
+  #ayc-dashboard-list table{width:100%; border-collapse:collapse;}
+#ayc-dashboard-list th,#ayc-dashboard-list td{padding:4px 6px; border:1px solid #ddd; font-size:13px;}
+canvas{max-width:100%; margin:auto;}
+
+

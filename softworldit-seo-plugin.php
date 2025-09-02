@@ -29,6 +29,15 @@ require_once plugin_dir_path(__FILE__) . 'includes/redirect-manager.php';
 require_once plugin_dir_path(__FILE__) . 'includes/not-found-logger.php';
 require_once plugin_dir_path(__FILE__) . 'includes/crawl-optimizer.php';
 
+// Another services Includes
+require_once plugin_dir_path(__FILE__) . 'includes/another_services/meta-boxes.php';
+require_once plugin_dir_path(__FILE__) . 'includes/another_services/snippet-preview.php';
+require_once plugin_dir_path(__FILE__) . 'includes/another_services/content-analysis.php';
+require_once plugin_dir_path(__FILE__) . 'includes/another_services/dashboard.php';
+require_once plugin_dir_path(__FILE__) . 'includes/another_services/save_meta_box.php';
+require_once plugin_dir_path(__FILE__) . 'includes/another_services/setup-wizard.php';
+require_once plugin_dir_path(__FILE__).'includes/another_services/search-appearance.php';
+
 // main plugin class
 class Softworld_AI_SEO_Plugin
 {
@@ -44,7 +53,6 @@ class Softworld_AI_SEO_Plugin
         add_action('init', array($this, 'init'));
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
         add_action('admin_enqueue_scripts', array($this, 'admin_enqueue_scripts'));
-
         // Add Admin Pages
         add_action('admin_menu', array($this, 'register_admin_menu'));
 
@@ -267,10 +275,18 @@ class Softworld_AI_SEO_Plugin
             [],
             '1.0.0'
         );
+
+        wp_enqueue_style(
+            'softworldit-ayc-admin-css',
+            plugin_dir_url(__FILE__) . 'assets/css/another_services.css',
+            [],
+            '1.0.0'
+        );
     }
 
     public function admin_enqueue_scripts()
     {
+        wp_enqueue_script('chart-js', 'https://cdn.jsdelivr.net/npm/chart.js', [], '4.3.0', true);
         // Enqueue admin scripts if needed
         wp_enqueue_script(
             'softworldit-seo-admin-script',
@@ -279,6 +295,32 @@ class Softworld_AI_SEO_Plugin
             '1.0.0',
             true
         );
+        
+        wp_enqueue_script(
+            'softworldit-ayc-admin-js',
+            plugin_dir_url(__FILE__) . 'assets/js/another_services.js',
+            ['jquery','chart-js'],
+            '1.0.0',
+            true
+        );
+
+        // ✅ এখানে AJAX + Nonce + Host data পাঠানো হলো (v1.5 থেকে আনা হয়েছে)
+        $host = parse_url(home_url(), PHP_URL_HOST);
+        wp_localize_script('softworldit-ayc-admin-js', 'AYC_SEO', [
+            'ajax'  => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('ayc_nonce'),
+            'i18n' => [
+                'save' => 'Save',
+                'cancel' => 'Cancel',
+                'enterSuggestion' => 'Write a tip or note…',
+                'selectStatus' => 'Select status',
+                'good' => 'Good',
+                'check' => 'Check',
+                'poor' => 'Poor',
+                'overridden' => '(overridden)',
+            ],
+            'host' => $host ?: ''
+        ]);
     }
 
     public function activate()
@@ -307,15 +349,27 @@ class Softworld_AI_SEO_Plugin
      */
     public function register_admin_menu()
     {
+        // add_menu_page(
+        // 'SoftworldIT SEO Dashboard', 
+        // 'SoftworldIT SEO', 
+        // 'manage_options', 
+        // 'softworldit-ai-seo', 
+        // 'softworldit_render_dashboard', 
+        // 'dashicons-chart-area', 
+        // 80);
+
         add_menu_page(
             'Softworld SEO',                    // Page title
             'Softworld SEO',                    // Menu title
             'manage_options',                   // Capability
             'softworld-ai-seo',                    // Menu slug
-            array($this, 'render_dashboard'),   // Callback
+            'softworldit_render_dashboard',   // Callback
             'dashicons-chart-area',             // Icon
             80                                  // Position
         );
+
+        add_submenu_page('softworld-ai-seo', 'Setup Wizard', 'Setup Wizard', 'manage_options', 'softworldit-setup', 'swit_render_setup_wizard');
+        add_submenu_page('softworld-ai-seo', 'Search Appearance', 'Search Appearance', 'manage_options', 'softworldit-search', 'softworldit_render_search');
 
         // Add Sitemap submenu
         add_submenu_page(
@@ -346,7 +400,7 @@ class Softworld_AI_SEO_Plugin
             array($this, 'render_ai_settings_admin')
         );
 
-         // Add submenus for the new features
+        // Add submenus for the new features
         add_submenu_page(
             'softworld-ai-seo',
             __('Redirects', 'softworld-ai-seo'),
