@@ -28,6 +28,8 @@ require_once plugin_dir_path(__FILE__) . 'includes/robots-txt-editor.php'; // Ad
 require_once plugin_dir_path(__FILE__) . 'includes/redirect-manager.php';
 require_once plugin_dir_path(__FILE__) . 'includes/not-found-logger.php';
 require_once plugin_dir_path(__FILE__) . 'includes/crawl-optimizer.php';
+require_once plugin_dir_path(__FILE__) . 'includes/advanced-meta-boxes.php';
+require_once plugin_dir_path(__FILE__) . 'includes/variable-replacement.php';
 
 // Another services Includes
 require_once plugin_dir_path(__FILE__) . 'includes/another_services/meta-boxes.php';
@@ -36,7 +38,7 @@ require_once plugin_dir_path(__FILE__) . 'includes/another_services/content-anal
 require_once plugin_dir_path(__FILE__) . 'includes/another_services/dashboard.php';
 require_once plugin_dir_path(__FILE__) . 'includes/another_services/save_meta_box.php';
 require_once plugin_dir_path(__FILE__) . 'includes/another_services/setup-wizard.php';
-require_once plugin_dir_path(__FILE__).'includes/another_services/search-appearance.php';
+require_once plugin_dir_path(__FILE__) . 'includes/another_services/search-appearance.php';
 
 // main plugin class
 class Softworld_AI_SEO_Plugin
@@ -47,6 +49,8 @@ class Softworld_AI_SEO_Plugin
     private $redirect_manager;
     private $not_found_logger;
     private $crawl_optimizer;
+    private $advanced_meta_boxes;
+
 
     public function __construct()
     {
@@ -72,6 +76,10 @@ class Softworld_AI_SEO_Plugin
         $this->not_found_logger = new Softworld_AI_SEO_Not_Found_Logger();
         // Initialize Crawl Optimizer
         $this->crawl_optimizer = new Softworld_AI_SEO_Crawl_Optimizer();
+        // Add this to the constructor
+        $this->advanced_meta_boxes = new Softworld_AI_SEO_Advanced_Meta_Boxes();
+        // Initialize in constructor
+        $this->variable_replacer = new Softworld_AI_SEO_Variable_Replacement();
 
         add_action('wp_ajax_softworld_search_posts', [$this, 'ajax_search_posts']);
         add_action('wp_ajax_softworld_search_pages', [$this, 'ajax_search_pages']);
@@ -88,6 +96,17 @@ class Softworld_AI_SEO_Plugin
 
         // Save meta box data
         add_action('save_post', array($this, 'save_meta_box_data'));
+    }
+
+    // Modify your title/description output functions
+    public function get_seo_title($post_id) {
+        $title = get_post_meta($post_id, '_softworld_ai_seo_title', true);
+        return $this->variable_replacer->replace_variables($title, $post_id);
+    }
+
+    public function get_seo_description($post_id) {
+        $description = get_post_meta($post_id, '_softworld_ai_seo_description', true);
+        return $this->variable_replacer->replace_variables($description, $post_id);
     }
 
     public function ajax_search_posts()

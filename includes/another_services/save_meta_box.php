@@ -21,3 +21,20 @@ add_action('save_post', function($post_id){
         update_post_meta($post_id,'_ayc_metric',$clean);
     }
 });
+
+// Add this to your save function
+if (isset($_POST['softworld_custom_fields_pattern'])) {
+    update_post_meta(
+        $post_id,
+        '_softworld_ai_seo_custom_fields_pattern',
+        sanitize_text_field($_POST['softworld_custom_fields_pattern'])
+    );
+}
+
+if (isset($_POST['softworld_wc_attributes_pattern'])) {
+    update_post_meta(
+        $post_id,
+        '_softworld_ai_seo_wc_attributes_pattern',
+        sanitize_text_field($_POST['softworld_wc_attributes_pattern'])
+    );
+}
