@@ -5,7 +5,19 @@
 
 class Softworld_AI_SEO_Variable_Replacement {
 
+    public function get_seo_title($post_id) {
+        $title = get_post_meta($post_id, '_softworld_ai_seo_title', true);
+        return $this->replace_variables($title, $post_id);
+    }
+
+    public function get_seo_description($post_id) {
+        $description = get_post_meta($post_id, '_softworld_ai_seo_description', true);
+        return $this->replace_variables($description, $post_id);
+    }
+
     public function replace_variables($content, $post_id) {
+        if (empty($content)) return $content;
+        
         $content = $this->replace_custom_fields($content, $post_id);
         $content = $this->replace_wc_attributes($content, $post_id);
         return $content;

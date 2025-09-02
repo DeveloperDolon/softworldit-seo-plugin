@@ -30,6 +30,7 @@ require_once plugin_dir_path(__FILE__) . 'includes/not-found-logger.php';
 require_once plugin_dir_path(__FILE__) . 'includes/crawl-optimizer.php';
 require_once plugin_dir_path(__FILE__) . 'includes/advanced-meta-boxes.php';
 require_once plugin_dir_path(__FILE__) . 'includes/variable-replacement.php';
+require_once plugin_dir_path(__FILE__) . 'includes/frontend-output.php';
 
 // Another services Includes
 require_once plugin_dir_path(__FILE__) . 'includes/another_services/meta-boxes.php';
@@ -50,6 +51,8 @@ class Softworld_AI_SEO_Plugin
     private $not_found_logger;
     private $crawl_optimizer;
     private $advanced_meta_boxes;
+    private $frontend_output;
+    private $variable_replacer;
 
 
     public function __construct()
@@ -80,10 +83,14 @@ class Softworld_AI_SEO_Plugin
         $this->advanced_meta_boxes = new Softworld_AI_SEO_Advanced_Meta_Boxes();
         // Initialize in constructor
         $this->variable_replacer = new Softworld_AI_SEO_Variable_Replacement();
+        // Initialize Frontend Output
+        $this->frontend_output = new Softworld_AI_SEO_Frontend_Output($this->variable_replacer);
 
         add_action('wp_ajax_softworld_search_posts', [$this, 'ajax_search_posts']);
         add_action('wp_ajax_softworld_search_pages', [$this, 'ajax_search_pages']);
         add_action('wp_ajax_softworld_manual_ping', [$this, 'ajax_manual_ping']);
+        add_shortcode('softworld_seo_title', array($this, 'seo_title_shortcode'));
+        add_shortcode('softworld_seo_description', array($this, 'seo_description_shortcode'));
     }
 
     public function init()
@@ -98,15 +105,40 @@ class Softworld_AI_SEO_Plugin
         add_action('save_post', array($this, 'save_meta_box_data'));
     }
 
-    // Modify your title/description output functions
-    public function get_seo_title($post_id) {
-        $title = get_post_meta($post_id, '_softworld_ai_seo_title', true);
-        return $this->variable_replacer->replace_variables($title, $post_id);
+    // Keep these helper methods if you need them:
+    public function get_the_seo_title($post_id = null)
+    {
+        if (!$post_id) {
+            $post_id = get_the_ID();
+        }
+        return $this->variable_replacer->get_seo_title($post_id);
     }
 
-    public function get_seo_description($post_id) {
-        $description = get_post_meta($post_id, '_softworld_ai_seo_description', true);
-        return $this->variable_replacer->replace_variables($description, $post_id);
+    public function get_the_seo_description($post_id = null)
+    {
+        if (!$post_id) {
+            $post_id = get_the_ID();
+        }
+        return $this->variable_replacer->get_seo_description($post_id);
+    }
+
+    // Shortcode methods
+    public function seo_title_shortcode($atts)
+    {
+        $atts = shortcode_atts(array(
+            'id' => get_the_ID(),
+        ), $atts);
+
+        return $this->get_seo_title($atts['id']);
+    }
+
+    public function seo_description_shortcode($atts)
+    {
+        $atts = shortcode_atts(array(
+            'id' => get_the_ID(),
+        ), $atts);
+
+        return $this->get_seo_description($atts['id']);
     }
 
     public function ajax_search_posts()
@@ -314,11 +346,11 @@ class Softworld_AI_SEO_Plugin
             '1.0.0',
             true
         );
-        
+
         wp_enqueue_script(
             'softworldit-ayc-admin-js',
             plugin_dir_url(__FILE__) . 'assets/js/another_services.js',
-            ['jquery','chart-js'],
+            ['jquery', 'chart-js'],
             '1.0.0',
             true
         );
@@ -326,7 +358,7 @@ class Softworld_AI_SEO_Plugin
         // ✅ এখানে AJAX + Nonce + Host data পাঠানো হলো (v1.5 থেকে আনা হয়েছে)
         $host = parse_url(home_url(), PHP_URL_HOST);
         wp_localize_script('softworldit-ayc-admin-js', 'AYC_SEO', [
-            'ajax'  => admin_url('admin-ajax.php'),
+            'ajax' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('ayc_nonce'),
             'i18n' => [
                 'save' => 'Save',
