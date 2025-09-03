@@ -16,27 +16,46 @@ class Softworld_AI_SEO_Schema_Manager
     public function __construct($plugin_name = 'softworld-ai-seo')
     {
         $this->plugin_name = $plugin_name;
-        
+
         // Hook into WordPress
         add_action('wp_head', array($this, 'output_schema_markup'), 5);
         add_action('add_meta_boxes', array($this, 'add_schema_meta_box'));
         add_action('save_post', array($this, 'save_schema_meta_box'));
-        
+
         // Initialize settings
         add_action('admin_init', array($this, 'register_schema_settings'));
-        
+
         // Enqueue admin scripts
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
+
+        // AJAX handlers for custom schema
+        add_action('wp_ajax_save_custom_schema', array($this, 'ajax_save_custom_schema'));
+        add_action('wp_ajax_delete_custom_schema', array($this, 'ajax_delete_custom_schema'));
+        add_action('wp_ajax_get_custom_schema', array($this, 'ajax_get_custom_schema'));
     }
 
     /**
      * Enqueue admin scripts
      */
+    /**
+     * Enqueue admin scripts
+     */
     public function enqueue_admin_scripts($hook)
     {
-        if ($hook === 'toplevel_page_softworld-ai-seo') {
+        // Check if we're on the schema settings page
+        $is_schema_page = strpos($hook, 'softworld-ai-seo') !== false || 
+                        strpos($hook, 'softworld_schema') !== false ||
+                        (isset($_GET['page']) && strpos($_GET['page'], 'softworld') !== false);
+        
+        if ($is_schema_page || $hook === 'post.php' || $hook === 'post-new.php') {
             wp_enqueue_media();
             wp_enqueue_script('softworld-schema-admin', plugin_dir_url(__FILE__) . '../assets/js/schema-admin.js', array('jquery'), '1.0.0', true);
+            
+            // Localize the script with data
+            wp_localize_script('softworld-schema-admin', 'softworldSchema', array(
+                'ajaxurl' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('softworld_schema_nonce')
+            ));
         }
     }
 
@@ -54,10 +73,15 @@ class Softworld_AI_SEO_Schema_Manager
         register_setting('softworld_schema_settings_group', 'softworld_schema_knowledge_graph', array(
             'sanitize_callback' => array($this, 'sanitize_knowledge_graph')
         ));
-        
+
         // Schema Types Settings
         register_setting('softworld_schema_settings_group', 'softworld_schema_types_settings', array(
             'sanitize_callback' => array($this, 'sanitize_schema_types_settings')
+        ));
+
+        // Custom Schema Settings
+        register_setting('softworld_schema_settings_group', 'softworld_schema_custom_types', array(
+            'sanitize_callback' => array($this, 'sanitize_custom_schema')
         ));
     }
 
@@ -67,41 +91,46 @@ class Softworld_AI_SEO_Schema_Manager
     public function sanitize_global_settings($input)
     {
         $sanitized = array();
-        
+
         if (isset($input['enable_schema'])) {
             $sanitized['enable_schema'] = (bool) $input['enable_schema'];
         }
-        
+
         if (isset($input['default_article_type'])) {
             $sanitized['default_article_type'] = sanitize_text_field($input['default_article_type']);
         }
-        
+
         if (isset($input['breadcrumb_schema'])) {
             $sanitized['breadcrumb_schema'] = (bool) $input['breadcrumb_schema'];
         }
-        
+
         if (isset($input['sitelinks_searchbox'])) {
             $sanitized['sitelinks_searchbox'] = (bool) $input['sitelinks_searchbox'];
         }
-        
+
         // Sanitize schema post types
         if (isset($input['schema_post_types'])) {
             $sanitized['schema_post_types'] = array();
             $post_types = get_post_types(array('public' => true), 'names');
-            
+
             foreach ($input['schema_post_types'] as $post_type) {
                 if (array_key_exists($post_type, $post_types)) {
                     $sanitized['schema_post_types'][] = sanitize_text_field($post_type);
                 }
             }
         }
-        
+
         // Sanitize default page schema
         if (isset($input['default_page_schema'])) {
             $allowed_page_schemas = array('WebPage', 'AboutPage', 'ContactPage', 'FAQPage');
             if (in_array($input['default_page_schema'], $allowed_page_schemas)) {
                 $sanitized['default_page_schema'] = sanitize_text_field($input['default_page_schema']);
             }
+        }
+
+        // Sanitize custom schema enable
+        if (isset($input['enable_custom_schema'])) {
+            $sanitized['enable_custom_schema'] = (bool) $input['enable_custom_schema'];
         }
 
         return $sanitized;
@@ -113,27 +142,27 @@ class Softworld_AI_SEO_Schema_Manager
     public function sanitize_knowledge_graph($input)
     {
         $sanitized = array();
-        
+
         if (isset($input['entity_type'])) {
             $sanitized['entity_type'] = sanitize_text_field($input['entity_type']);
         }
-        
+
         if (isset($input['organization_name'])) {
             $sanitized['organization_name'] = sanitize_text_field($input['organization_name']);
         }
-        
+
         if (isset($input['organization_logo'])) {
             $sanitized['organization_logo'] = esc_url_raw($input['organization_logo']);
         }
-        
+
         if (isset($input['person_name'])) {
             $sanitized['person_name'] = sanitize_text_field($input['person_name']);
         }
-        
+
         if (isset($input['person_image'])) {
             $sanitized['person_image'] = esc_url_raw($input['person_image']);
         }
-        
+
         if (isset($input['social_profiles'])) {
             $sanitized['social_profiles'] = array();
             foreach ($input['social_profiles'] as $profile) {
@@ -145,24 +174,67 @@ class Softworld_AI_SEO_Schema_Manager
 
         return $sanitized;
     }
-    
+
     /**
      * Sanitize schema types settings
      */
     public function sanitize_schema_types_settings($input)
     {
         $sanitized = array();
-        
+
         if (isset($input['enable_product_schema'])) {
             $sanitized['enable_product_schema'] = (bool) $input['enable_product_schema'];
         }
-        
+
         if (isset($input['enable_faq_schema'])) {
             $sanitized['enable_faq_schema'] = (bool) $input['enable_faq_schema'];
         }
-        
+
         if (isset($input['enable_howto_schema'])) {
             $sanitized['enable_howto_schema'] = (bool) $input['enable_howto_schema'];
+        }
+
+        return $sanitized;
+    }
+
+    /**
+     * Sanitize custom schema settings
+     */
+    public function sanitize_custom_schema($input)
+    {
+        $sanitized = array();
+
+        if (!is_array($input)) {
+            return $sanitized;
+        }
+
+        foreach ($input as $key => $schema) {
+            $sanitized_schema = array();
+
+            // Sanitize basic fields
+            $sanitized_schema['name'] = sanitize_text_field($schema['name']);
+            $sanitized_schema['type'] = sanitize_text_field($schema['type']);
+            $sanitized_schema['description'] = sanitize_textarea_field($schema['description']);
+
+            // Sanitize properties
+            if (isset($schema['properties']) && is_array($schema['properties'])) {
+                $sanitized_properties = array();
+
+                foreach ($schema['properties'] as $prop_key => $property) {
+                    $sanitized_property = array(
+                        'name' => sanitize_text_field($property['name']),
+                        'type' => sanitize_text_field($property['type']),
+                        'required' => !empty($property['required']),
+                        'description' => sanitize_textarea_field($property['description'])
+                    );
+
+                    $sanitized_properties[sanitize_key($prop_key)] = $sanitized_property;
+                }
+
+                $sanitized_schema['properties'] = $sanitized_properties;
+            }
+
+            $sanitized[sanitize_key($key)] = $sanitized_schema;
         }
 
         return $sanitized;
@@ -175,7 +247,7 @@ class Softworld_AI_SEO_Schema_Manager
     {
         $global_settings = get_option('softworld_schema_global_settings', array());
         $selected_post_types = isset($global_settings['schema_post_types']) ? $global_settings['schema_post_types'] : array('post', 'page');
-        
+
         foreach ($selected_post_types as $post_type) {
             add_meta_box(
                 'softworld_schema_meta_box',
@@ -194,17 +266,20 @@ class Softworld_AI_SEO_Schema_Manager
     public function render_schema_meta_box($post)
     {
         wp_nonce_field('softworld_schema_meta_box', 'softworld_schema_nonce');
-        
+
         $schema_type = get_post_meta($post->ID, '_softworld_schema_type', true);
         $schema_data = get_post_meta($post->ID, '_softworld_schema_data', true);
-        
+
         if (!$schema_data) {
             $schema_data = array();
         }
-        
+
         // Get schema types settings
         $schema_types_settings = get_option('softworld_schema_types_settings', array());
-        
+
+        // Get custom schema types
+        $custom_schema_types = get_option('softworld_schema_custom_types', array());
+
         ?>
         <div class="softworld-schema-meta-box">
             <p>
@@ -212,34 +287,46 @@ class Softworld_AI_SEO_Schema_Manager
                 <select id="softworld_schema_type" name="softworld_schema_type" style="width: 100%;">
                     <option value="">None</option>
                     <option value="Article" <?php selected($schema_type, 'Article'); ?>>Article</option>
-                    
+
                     <?php if (!empty($schema_types_settings['enable_product_schema'])): ?>
-                    <option value="Product" <?php selected($schema_type, 'Product'); ?>>Product</option>
+                        <option value="Product" <?php selected($schema_type, 'Product'); ?>>Product</option>
                     <?php endif; ?>
-                    
+
                     <?php if (!empty($schema_types_settings['enable_faq_schema'])): ?>
-                    <option value="FAQPage" <?php selected($schema_type, 'FAQPage'); ?>>FAQ</option>
+                        <option value="FAQPage" <?php selected($schema_type, 'FAQPage'); ?>>FAQ</option>
                     <?php endif; ?>
-                    
+
                     <?php if (!empty($schema_types_settings['enable_howto_schema'])): ?>
-                    <option value="HowTo" <?php selected($schema_type, 'HowTo'); ?>>How-To</option>
+                        <option value="HowTo" <?php selected($schema_type, 'HowTo'); ?>>How-To</option>
                     <?php endif; ?>
-                    
+
                     <option value="Review" <?php selected($schema_type, 'Review'); ?>>Review</option>
                     <option value="Recipe" <?php selected($schema_type, 'Recipe'); ?>>Recipe</option>
+
+                    <!-- Custom Schema Types -->
+                    <?php foreach ($custom_schema_types as $key => $custom_schema): ?>
+                        <option value="<?php echo esc_attr($custom_schema['type']); ?>" <?php selected($schema_type, $custom_schema['type']); ?>>
+                            <?php echo esc_html($custom_schema['name']); ?> (Custom)
+                        </option>
+                    <?php endforeach; ?>
                 </select>
             </p>
-            
+
             <div id="schema_additional_fields" style="<?php echo empty($schema_type) ? 'display:none;' : ''; ?>">
                 <!-- Product Schema Fields -->
-                <div class="schema-fields product-fields" style="<?php echo $schema_type !== 'Product' ? 'display:none;' : ''; ?>">
+                <div class="schema-fields product-fields"
+                    style="<?php echo $schema_type !== 'Product' ? 'display:none;' : ''; ?>">
                     <p>
                         <label for="product_price"><strong>Price:</strong></label>
-                        <input type="text" id="product_price" name="schema_data[price]" value="<?php echo esc_attr(isset($schema_data['price']) ? $schema_data['price'] : ''); ?>" style="width: 100%;">
+                        <input type="text" id="product_price" name="schema_data[price]"
+                            value="<?php echo esc_attr(isset($schema_data['price']) ? $schema_data['price'] : ''); ?>"
+                            style="width: 100%;">
                     </p>
                     <p>
                         <label for="product_currency"><strong>Currency:</strong></label>
-                        <input type="text" id="product_currency" name="schema_data[currency]" value="<?php echo esc_attr(isset($schema_data['currency']) ? $schema_data['currency'] : 'USD'); ?>" style="width: 100%;">
+                        <input type="text" id="product_currency" name="schema_data[currency]"
+                            value="<?php echo esc_attr(isset($schema_data['currency']) ? $schema_data['currency'] : 'USD'); ?>"
+                            style="width: 100%;">
                     </p>
                     <p>
                         <label for="product_availability"><strong>Availability:</strong></label>
@@ -250,91 +337,155 @@ class Softworld_AI_SEO_Schema_Manager
                         </select>
                     </p>
                 </div>
-                
+
                 <!-- FAQ Schema Fields -->
                 <div class="schema-fields faq-fields" style="<?php echo $schema_type !== 'FAQPage' ? 'display:none;' : ''; ?>">
                     <p>
                         <label for="faq_questions"><strong>FAQ Questions (one per line):</strong></label>
-                        <textarea id="faq_questions" name="schema_data[faq_questions]" style="width: 100%; height: 100px;"><?php echo esc_textarea(isset($schema_data['faq_questions']) ? $schema_data['faq_questions'] : ''); ?></textarea>
+                        <textarea id="faq_questions" name="schema_data[faq_questions]"
+                            style="width: 100%; height: 100px;"><?php echo esc_textarea(isset($schema_data['faq_questions']) ? $schema_data['faq_questions'] : ''); ?></textarea>
                     </p>
                 </div>
-                
+
                 <!-- How-To Schema Fields -->
                 <div class="schema-fields howto-fields" style="<?php echo $schema_type !== 'HowTo' ? 'display:none;' : ''; ?>">
                     <p>
                         <label for="howto_steps"><strong>Steps (one per line):</strong></label>
-                        <textarea id="howto_steps" name="schema_data[howto_steps]" style="width: 100%; height: 100px;"><?php echo esc_textarea(isset($schema_data['howto_steps']) ? $schema_data['howto_steps'] : ''); ?></textarea>
+                        <textarea id="howto_steps" name="schema_data[howto_steps]"
+                            style="width: 100%; height: 100px;"><?php echo esc_textarea(isset($schema_data['howto_steps']) ? $schema_data['howto_steps'] : ''); ?></textarea>
                     </p>
                     <p>
                         <label for="howto_supplies"><strong>Supplies (comma separated):</strong></label>
-                        <input type="text" id="howto_supplies" name="schema_data[howto_supplies]" value="<?php echo esc_attr(isset($schema_data['howto_supplies']) ? $schema_data['howto_supplies'] : ''); ?>" style="width: 100%;">
+                        <input type="text" id="howto_supplies" name="schema_data[howto_supplies]"
+                            value="<?php echo esc_attr(isset($schema_data['howto_supplies']) ? $schema_data['howto_supplies'] : ''); ?>"
+                            style="width: 100%;">
                     </p>
                 </div>
-                
+
                 <!-- Review Schema Fields -->
-                <div class="schema-fields review-fields" style="<?php echo $schema_type !== 'Review' ? 'display:none;' : ''; ?>">
+                <div class="schema-fields review-fields"
+                    style="<?php echo $schema_type !== 'Review' ? 'display:none;' : ''; ?>">
                     <p>
                         <label for="review_rating"><strong>Rating (1-5):</strong></label>
-                        <input type="number" id="review_rating" name="schema_data[rating]" min="1" max="5" step="0.1" value="<?php echo esc_attr(isset($schema_data['rating']) ? $schema_data['rating'] : ''); ?>" style="width: 100%;">
+                        <input type="number" id="review_rating" name="schema_data[rating]" min="1" max="5" step="0.1"
+                            value="<?php echo esc_attr(isset($schema_data['rating']) ? $schema_data['rating'] : ''); ?>"
+                            style="width: 100%;">
                     </p>
                     <p>
                         <label for="review_item_name"><strong>Item Being Reviewed:</strong></label>
-                        <input type="text" id="review_item_name" name="schema_data[item_name]" value="<?php echo esc_attr(isset($schema_data['item_name']) ? $schema_data['item_name'] : ''); ?>" style="width: 100%;">
+                        <input type="text" id="review_item_name" name="schema_data[item_name]"
+                            value="<?php echo esc_attr(isset($schema_data['item_name']) ? $schema_data['item_name'] : ''); ?>"
+                            style="width: 100%;">
                     </p>
                 </div>
-                
+
                 <!-- Recipe Schema Fields -->
-                <div class="schema-fields recipe-fields" style="<?php echo $schema_type !== 'Recipe' ? 'display:none;' : ''; ?>">
+                <div class="schema-fields recipe-fields"
+                    style="<?php echo $schema_type !== 'Recipe' ? 'display:none;' : ''; ?>">
                     <p>
                         <label for="recipe_prep_time"><strong>Prep Time (minutes):</strong></label>
-                        <input type="number" id="recipe_prep_time" name="schema_data[prep_time]" value="<?php echo esc_attr(isset($schema_data['prep_time']) ? $schema_data['prep_time'] : ''); ?>" style="width: 100%;">
+                        <input type="number" id="recipe_prep_time" name="schema_data[prep_time]"
+                            value="<?php echo esc_attr(isset($schema_data['prep_time']) ? $schema_data['prep_time'] : ''); ?>"
+                            style="width: 100%;">
                     </p>
                     <p>
                         <label for="recipe_cook_time"><strong>Cook Time (minutes):</strong></label>
-                        <input type="number" id="recipe_cook_time" name="schema_data[cook_time]" value="<?php echo esc_attr(isset($schema_data['cook_time']) ? $schema_data['cook_time'] : ''); ?>" style="width: 100%;">
+                        <input type="number" id="recipe_cook_time" name="schema_data[cook_time]"
+                            value="<?php echo esc_attr(isset($schema_data['cook_time']) ? $schema_data['cook_time'] : ''); ?>"
+                            style="width: 100%;">
                     </p>
                     <p>
                         <label for="recipe_servings"><strong>Servings:</strong></label>
-                        <input type="number" id="recipe_servings" name="schema_data[servings]" value="<?php echo esc_attr(isset($schema_data['servings']) ? $schema_data['servings'] : ''); ?>" style="width: 100%;">
+                        <input type="number" id="recipe_servings" name="schema_data[servings]"
+                            value="<?php echo esc_attr(isset($schema_data['servings']) ? $schema_data['servings'] : ''); ?>"
+                            style="width: 100%;">
                     </p>
                 </div>
+
+                <!-- Custom Schema Fields -->
+                <?php foreach ($custom_schema_types as $key => $custom_schema): ?>
+                    <div class="schema-fields custom-schema-fields custom-schema-<?php echo esc_attr($key); ?>"
+                        style="<?php echo $schema_type !== $custom_schema['type'] ? 'display:none;' : ''; ?>">
+                        <h4><?php echo esc_html($custom_schema['name']); ?> Properties</h4>
+                        <p class="description"><?php echo esc_html($custom_schema['description']); ?></p>
+
+                        <?php if (!empty($custom_schema['properties'])): ?>
+                            <?php foreach ($custom_schema['properties'] as $prop_key => $property): ?>
+                                <p>
+                                    <label for="custom_<?php echo esc_attr($key); ?>_<?php echo esc_attr($prop_key); ?>">
+                                        <strong><?php echo esc_html($property['name']); ?>:</strong>
+                                        <?php if (!empty($property['required'])): ?>
+                                            <span class="required">*</span>
+                                        <?php endif; ?>
+                                    </label>
+
+                                    <?php if ($property['type'] === 'textarea'): ?>
+                                        <textarea id="custom_<?php echo esc_attr($key); ?>_<?php echo esc_attr($prop_key); ?>"
+                                            name="schema_data[custom][<?php echo esc_attr($key); ?>][<?php echo esc_attr($prop_key); ?>]"
+                                            style="width: 100%; height: 60px;" <?php echo !empty($property['required']) ? 'required' : ''; ?>>
+                                                            <?php echo esc_textarea(isset($schema_data['custom'][$key][$prop_key]) ? $schema_data['custom'][$key][$prop_key] : ''); ?>
+                                                        </textarea>
+                                    <?php else: ?>
+                                        <input type="<?php echo esc_attr($property['type']); ?>"
+                                            id="custom_<?php echo esc_attr($key); ?>_<?php echo esc_attr($prop_key); ?>"
+                                            name="schema_data[custom][<?php echo esc_attr($key); ?>][<?php echo esc_attr($prop_key); ?>]"
+                                            value="<?php echo esc_attr(isset($schema_data['custom'][$key][$prop_key]) ? $schema_data['custom'][$key][$prop_key] : ''); ?>"
+                                            style="width: 100%;" <?php echo !empty($property['required']) ? 'required' : ''; ?>>
+                                    <?php endif; ?>
+
+                                    <?php if (!empty($property['description'])): ?>
+                                        <span class="description"><?php echo esc_html($property['description']); ?></span>
+                                    <?php endif; ?>
+                                </p>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </div>
+                <?php endforeach; ?>
             </div>
         </div>
-        
+
         <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            var schemaSelect = document.getElementById('softworld_schema_type');
-            var additionalFields = document.getElementById('schema_additional_fields');
-            var allFields = additionalFields.querySelectorAll('.schema-fields');
-            
-            schemaSelect.addEventListener('change', function() {
-                var selectedType = this.value;
-                
-                if (selectedType) {
-                    additionalFields.style.display = 'block';
-                } else {
-                    additionalFields.style.display = 'none';
-                }
-                
-                // Hide all fields first
-                allFields.forEach(function(field) {
-                    field.style.display = 'none';
+            document.addEventListener('DOMContentLoaded', function () {
+                var schemaSelect = document.getElementById('softworld_schema_type');
+                var additionalFields = document.getElementById('schema_additional_fields');
+                var allFields = additionalFields.querySelectorAll('.schema-fields');
+
+                schemaSelect.addEventListener('change', function () {
+                    var selectedType = this.value;
+
+                    if (selectedType) {
+                        additionalFields.style.display = 'block';
+                    } else {
+                        additionalFields.style.display = 'none';
+                    }
+
+                    // Hide all fields first
+                    allFields.forEach(function (field) {
+                        field.style.display = 'none';
+                    });
+
+                    // Show relevant fields
+                    if (selectedType === 'Product') {
+                        additionalFields.querySelector('.product-fields').style.display = 'block';
+                    } else if (selectedType === 'FAQPage') {
+                        additionalFields.querySelector('.faq-fields').style.display = 'block';
+                    } else if (selectedType === 'HowTo') {
+                        additionalFields.querySelector('.howto-fields').style.display = 'block';
+                    } else if (selectedType === 'Review') {
+                        additionalFields.querySelector('.review-fields').style.display = 'block';
+                    } else if (selectedType === 'Recipe') {
+                        additionalFields.querySelector('.recipe-fields').style.display = 'block';
+                    }
+
+                    // Show custom schema fields if selected
+                    var customFields = additionalFields.querySelectorAll('.custom-schema-fields');
+                    customFields.forEach(function (field) {
+                        if (field.classList.contains('custom-schema-' + selectedType.toLowerCase().replace(/\s+/g, '-'))) {
+                            field.style.display = 'block';
+                        }
+                    });
                 });
-                
-                // Show relevant fields
-                if (selectedType === 'Product') {
-                    additionalFields.querySelector('.product-fields').style.display = 'block';
-                } else if (selectedType === 'FAQPage') {
-                    additionalFields.querySelector('.faq-fields').style.display = 'block';
-                } else if (selectedType === 'HowTo') {
-                    additionalFields.querySelector('.howto-fields').style.display = 'block';
-                } else if (selectedType === 'Review') {
-                    additionalFields.querySelector('.review-fields').style.display = 'block';
-                } else if (selectedType === 'Recipe') {
-                    additionalFields.querySelector('.recipe-fields').style.display = 'block';
-                }
             });
-        });
         </script>
         <?php
     }
@@ -348,27 +499,40 @@ class Softworld_AI_SEO_Schema_Manager
         if (!isset($_POST['softworld_schema_nonce']) || !wp_verify_nonce($_POST['softworld_schema_nonce'], 'softworld_schema_meta_box')) {
             return;
         }
-        
+
         // Check autosave
         if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
             return;
         }
-        
+
         // Check permissions
         if (!current_user_can('edit_post', $post_id)) {
             return;
         }
-        
+
         // Save schema type
         if (isset($_POST['softworld_schema_type'])) {
             update_post_meta($post_id, '_softworld_schema_type', sanitize_text_field($_POST['softworld_schema_type']));
         }
-        
+
         // Save schema data
         if (isset($_POST['schema_data'])) {
             $schema_data = array();
             foreach ($_POST['schema_data'] as $key => $value) {
-                $schema_data[sanitize_key($key)] = sanitize_text_field($value);
+                if ($key === 'custom') {
+                    // Handle custom schema data
+                    $custom_data = array();
+                    foreach ($value as $custom_key => $custom_value) {
+                        $sanitized_custom = array();
+                        foreach ($custom_value as $prop_key => $prop_value) {
+                            $sanitized_custom[sanitize_key($prop_key)] = sanitize_text_field($prop_value);
+                        }
+                        $custom_data[sanitize_key($custom_key)] = $sanitized_custom;
+                    }
+                    $schema_data['custom'] = $custom_data;
+                } else {
+                    $schema_data[sanitize_key($key)] = sanitize_text_field($value);
+                }
             }
             update_post_meta($post_id, '_softworld_schema_data', $schema_data);
         }
@@ -380,36 +544,36 @@ class Softworld_AI_SEO_Schema_Manager
     public function output_schema_markup()
     {
         $global_settings = get_option('softworld_schema_global_settings', array());
-        
+
         // Check if schema is enabled
         if (empty($global_settings['enable_schema'])) {
             return;
         }
-        
+
         // Check if current post type supports schema
         if (is_singular()) {
             global $post;
             $selected_post_types = isset($global_settings['schema_post_types']) ? $global_settings['schema_post_types'] : array('post', 'page');
-            
+
             if (!in_array($post->post_type, $selected_post_types)) {
                 return;
             }
         }
-        
+
         $schema_data = array();
-        
+
         // Add Knowledge Graph
         $knowledge_graph = $this->get_knowledge_graph_schema();
         if ($knowledge_graph) {
             $schema_data[] = $knowledge_graph;
         }
-        
+
         // Add Website Schema
         $website_schema = $this->get_website_schema();
         if ($website_schema) {
             $schema_data[] = $website_schema;
         }
-        
+
         // Add page-specific schema
         if (is_singular()) {
             $post_schema = $this->get_post_schema();
@@ -417,7 +581,7 @@ class Softworld_AI_SEO_Schema_Manager
                 $schema_data[] = $post_schema;
             }
         }
-        
+
         // Add breadcrumb schema
         if (!empty($global_settings['breadcrumb_schema']) && !is_front_page()) {
             $breadcrumb_schema = $this->get_breadcrumb_schema();
@@ -425,7 +589,15 @@ class Softworld_AI_SEO_Schema_Manager
                 $schema_data[] = $breadcrumb_schema;
             }
         }
-        
+
+        // Add custom schema if enabled
+        if (!empty($global_settings['enable_custom_schema'])) {
+            $custom_schemas = $this->get_custom_schemas();
+            if (!empty($custom_schemas)) {
+                $schema_data = array_merge($schema_data, $custom_schemas);
+            }
+        }
+
         if (!empty($schema_data)) {
             echo '<script type="application/ld+json">' . "\n";
             echo wp_json_encode($schema_data, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
@@ -439,17 +611,17 @@ class Softworld_AI_SEO_Schema_Manager
     private function get_knowledge_graph_schema()
     {
         $kg_settings = get_option('softworld_schema_knowledge_graph', array());
-        
+
         if (empty($kg_settings['entity_type'])) {
             return null;
         }
-        
+
         $schema = array(
             '@context' => 'https://schema.org',
             '@type' => $kg_settings['entity_type'],
             'url' => home_url(),
         );
-        
+
         if ($kg_settings['entity_type'] === 'Organization') {
             if (!empty($kg_settings['organization_name'])) {
                 $schema['name'] = $kg_settings['organization_name'];
@@ -465,11 +637,11 @@ class Softworld_AI_SEO_Schema_Manager
                 $schema['image'] = $kg_settings['person_image'];
             }
         }
-        
+
         if (!empty($kg_settings['social_profiles'])) {
             $schema['sameAs'] = $kg_settings['social_profiles'];
         }
-        
+
         return $schema;
     }
 
@@ -479,14 +651,14 @@ class Softworld_AI_SEO_Schema_Manager
     private function get_website_schema()
     {
         $global_settings = get_option('softworld_schema_global_settings', array());
-        
+
         $schema = array(
             '@context' => 'https://schema.org',
             '@type' => 'WebSite',
             'name' => get_bloginfo('name'),
             'url' => home_url(),
         );
-        
+
         if (!empty($global_settings['sitelinks_searchbox'])) {
             $schema['potentialAction'] = array(
                 '@type' => 'SearchAction',
@@ -497,7 +669,7 @@ class Softworld_AI_SEO_Schema_Manager
                 'query-input' => 'required name=search_term_string'
             );
         }
-        
+
         return $schema;
     }
 
@@ -507,43 +679,43 @@ class Softworld_AI_SEO_Schema_Manager
     private function get_post_schema()
     {
         global $post;
-        
+
         if (!$post) {
             return null;
         }
-        
+
         $schema_type = get_post_meta($post->ID, '_softworld_schema_type', true);
         $schema_data = get_post_meta($post->ID, '_softworld_schema_data', true);
-        
+
         // Get global settings for defaults
         $global_settings = get_option('softworld_schema_global_settings', array());
-        
+
         if (empty($schema_type)) {
             // Set default based on post type
             if ($post->post_type === 'post') {
-                $schema_type = !empty($global_settings['default_article_type']) ? 
+                $schema_type = !empty($global_settings['default_article_type']) ?
                     $global_settings['default_article_type'] : 'Article';
             } elseif ($post->post_type === 'page') {
-                $schema_type = !empty($global_settings['default_page_schema']) ? 
+                $schema_type = !empty($global_settings['default_page_schema']) ?
                     $global_settings['default_page_schema'] : 'WebPage';
             } else {
                 return null;
             }
         }
-        
+
         $schema = array(
             '@context' => 'https://schema.org',
             '@type' => $schema_type,
             'headline' => get_the_title($post->ID),
             'url' => get_permalink($post->ID),
         );
-        
+
         // Add dates for content that typically has them
         if (in_array($schema_type, array('Article', 'BlogPosting', 'NewsArticle', 'TechArticle'))) {
             $schema['datePublished'] = get_the_date('c', $post->ID);
             $schema['dateModified'] = get_the_modified_date('c', $post->ID);
         }
-        
+
         // Add description
         $description = get_post_meta($post->ID, '_softworld_ai_seo_description', true);
         if (empty($description)) {
@@ -552,7 +724,7 @@ class Softworld_AI_SEO_Schema_Manager
         if ($description) {
             $schema['description'] = $description;
         }
-        
+
         // Add author
         $author_id = $post->post_author;
         $schema['author'] = array(
@@ -560,7 +732,7 @@ class Softworld_AI_SEO_Schema_Manager
             'name' => get_the_author_meta('display_name', $author_id),
             'url' => get_author_posts_url($author_id)
         );
-        
+
         // Add featured image
         if (has_post_thumbnail($post->ID)) {
             $image_data = wp_get_attachment_image_src(get_post_thumbnail_id($post->ID), 'full');
@@ -573,7 +745,7 @@ class Softworld_AI_SEO_Schema_Manager
                 );
             }
         }
-        
+
         // Add publisher
         $kg_settings = get_option('softworld_schema_knowledge_graph', array());
         if (!empty($kg_settings['entity_type']) && !empty($kg_settings['organization_name'])) {
@@ -588,7 +760,7 @@ class Softworld_AI_SEO_Schema_Manager
                 );
             }
         }
-        
+
         // Add schema-specific data
         switch ($schema_type) {
             case 'Product':
@@ -601,12 +773,12 @@ class Softworld_AI_SEO_Schema_Manager
                     );
                 }
                 break;
-                
+
             case 'FAQPage':
                 if (!empty($schema_data['faq_questions'])) {
                     $questions = explode("\n", $schema_data['faq_questions']);
                     $mainEntity = array();
-                    
+
                     foreach ($questions as $question) {
                         if (!empty(trim($question))) {
                             $mainEntity[] = array(
@@ -619,19 +791,19 @@ class Softworld_AI_SEO_Schema_Manager
                             );
                         }
                     }
-                    
+
                     if (!empty($mainEntity)) {
                         $schema['mainEntity'] = $mainEntity;
                     }
                 }
                 break;
-                
+
             case 'HowTo':
                 if (!empty($schema_data['howto_steps'])) {
                     $steps = explode("\n", $schema_data['howto_steps']);
                     $stepObjects = array();
                     $stepCount = 1;
-                    
+
                     foreach ($steps as $step) {
                         if (!empty(trim($step))) {
                             $stepObjects[] = array(
@@ -641,16 +813,16 @@ class Softworld_AI_SEO_Schema_Manager
                             );
                         }
                     }
-                    
+
                     if (!empty($stepObjects)) {
                         $schema['step'] = $stepObjects;
                     }
                 }
-                
+
                 if (!empty($schema_data['howto_supplies'])) {
                     $supplies = explode(",", $schema_data['howto_supplies']);
                     $supplyObjects = array();
-                    
+
                     foreach ($supplies as $supply) {
                         if (!empty(trim($supply))) {
                             $supplyObjects[] = array(
@@ -659,13 +831,13 @@ class Softworld_AI_SEO_Schema_Manager
                             );
                         }
                     }
-                    
+
                     if (!empty($supplyObjects)) {
                         $schema['supply'] = $supplyObjects;
                     }
                 }
                 break;
-                
+
             case 'Review':
                 if (!empty($schema_data['rating'])) {
                     $schema['reviewRating'] = array(
@@ -682,7 +854,7 @@ class Softworld_AI_SEO_Schema_Manager
                     );
                 }
                 break;
-                
+
             case 'Recipe':
                 if (!empty($schema_data['prep_time'])) {
                     $schema['prepTime'] = 'PT' . $schema_data['prep_time'] . 'M';
@@ -694,8 +866,25 @@ class Softworld_AI_SEO_Schema_Manager
                     $schema['recipeYield'] = $schema_data['servings'];
                 }
                 break;
+
+            default:
+                // Handle custom schema types
+                $custom_schema_types = get_option('softworld_schema_custom_types', array());
+                $schema_key = array_search($schema_type, array_column($custom_schema_types, 'type'));
+
+                if ($schema_key !== false && isset($schema_data['custom'][$schema_key])) {
+                    $custom_schema = $custom_schema_types[$schema_key];
+
+                    // Add custom properties
+                    foreach ($schema_data['custom'][$schema_key] as $prop_key => $prop_value) {
+                        if (!empty($prop_value) && isset($custom_schema['properties'][$prop_key])) {
+                            $schema[$prop_key] = $prop_value;
+                        }
+                    }
+                }
+                break;
         }
-        
+
         return $schema;
     }
 
@@ -707,10 +896,10 @@ class Softworld_AI_SEO_Schema_Manager
         if (is_front_page()) {
             return null;
         }
-        
+
         $breadcrumbs = array();
         $position = 1;
-        
+
         // Home
         $breadcrumbs[] = array(
             '@type' => 'ListItem',
@@ -718,7 +907,7 @@ class Softworld_AI_SEO_Schema_Manager
             'name' => get_bloginfo('name'),
             'item' => home_url()
         );
-        
+
         if (is_category() || is_tag() || is_tax()) {
             $term = get_queried_object();
             if ($term) {
@@ -731,7 +920,7 @@ class Softworld_AI_SEO_Schema_Manager
             }
         } elseif (is_single()) {
             global $post;
-            
+
             // Add category for posts
             if ($post->post_type === 'post') {
                 $categories = get_the_category($post->ID);
@@ -745,7 +934,7 @@ class Softworld_AI_SEO_Schema_Manager
                     );
                 }
             }
-            
+
             // Add current post
             $breadcrumbs[] = array(
                 '@type' => 'ListItem',
@@ -755,7 +944,7 @@ class Softworld_AI_SEO_Schema_Manager
             );
         } elseif (is_page()) {
             global $post;
-            
+
             // Add parent pages
             if ($post->post_parent) {
                 $parents = array();
@@ -766,7 +955,7 @@ class Softworld_AI_SEO_Schema_Manager
                     $parent_id = $page->post_parent;
                 }
                 $parents = array_reverse($parents);
-                
+
                 foreach ($parents as $parent) {
                     $breadcrumbs[] = array(
                         '@type' => 'ListItem',
@@ -776,7 +965,7 @@ class Softworld_AI_SEO_Schema_Manager
                     );
                 }
             }
-            
+
             // Add current page
             $breadcrumbs[] = array(
                 '@type' => 'ListItem',
@@ -785,7 +974,7 @@ class Softworld_AI_SEO_Schema_Manager
                 'item' => get_permalink($post->ID)
             );
         }
-        
+
         if (count($breadcrumbs) > 1) {
             return array(
                 '@context' => 'https://schema.org',
@@ -793,8 +982,155 @@ class Softworld_AI_SEO_Schema_Manager
                 'itemListElement' => $breadcrumbs
             );
         }
-        
+
         return null;
+    }
+
+    /**
+     * Get custom schemas
+     */
+    private function get_custom_schemas()
+    {
+        $custom_schemas = array();
+        $custom_schema_types = get_option('softworld_schema_custom_types', array());
+
+        foreach ($custom_schema_types as $key => $schema) {
+            // This is a placeholder - in a real implementation, you would
+            // get the actual data for each custom schema type
+            $custom_schemas[] = array(
+                '@context' => 'https://schema.org',
+                '@type' => $schema['type'],
+                'name' => $schema['name'],
+                'description' => $schema['description']
+                // Additional properties would be added based on the schema definition
+            );
+        }
+
+        return $custom_schemas;
+    }
+
+    /**
+     * AJAX handler to save custom schema
+     */
+    /**
+     * AJAX handler to save custom schema
+     */
+/**
+ * AJAX handler to save custom schema
+ */
+    public function ajax_save_custom_schema()
+    {
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'softworld_schema_nonce')) {
+            wp_send_json_error('Invalid nonce');
+        }
+        
+        // Check permissions
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Insufficient permissions');
+        }
+        
+        $schema_data = $_POST['schema'];
+        $schema_id = sanitize_key($_POST['id']);
+        
+        // Get existing custom schemas
+        $custom_schemas = get_option('softworld_schema_custom_types', array());
+        
+        // Validate required fields
+        if (empty($schema_data['name']) || empty($schema_data['type'])) {
+            wp_send_json_error('Schema name and type are required');
+        }
+        
+        // Sanitize the schema data
+        $sanitized_schema = array(
+            'name' => sanitize_text_field($schema_data['name']),
+            'type' => sanitize_text_field($schema_data['type']),
+            'description' => sanitize_textarea_field($schema_data['description']),
+            'properties' => array()
+        );
+        
+        // Add properties if provided
+        if (!empty($schema_data['properties']) && is_array($schema_data['properties'])) {
+            foreach ($schema_data['properties'] as $property) {
+                if (!empty($property['name'])) {
+                    $prop_id = sanitize_key($property['name']);
+                    $sanitized_schema['properties'][$prop_id] = array(
+                        'name' => sanitize_text_field($property['name']),
+                        'type' => sanitize_text_field($property['type']),
+                        'required' => !empty($property['required']),
+                        'description' => sanitize_textarea_field($property['description'])
+                    );
+                }
+            }
+        }
+        
+        // Add or update the schema
+        $custom_schemas[$schema_id] = $sanitized_schema;
+        
+        // Save the updated schemas
+        $result = update_option('softworld_schema_custom_types', $custom_schemas);
+        
+        if ($result) {
+            wp_send_json_success('Custom schema saved successfully');
+        } else {
+            wp_send_json_error('Failed to save custom schema');
+        }
+    }
+    /**
+     * AJAX handler to delete custom schema
+     */
+    public function ajax_delete_custom_schema()
+    {
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'softworld_schema_nonce')) {
+            wp_send_json_error('Invalid nonce');
+        }
+
+        // Check permissions
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Insufficient permissions');
+        }
+
+        $schema_id = sanitize_key($_POST['id']);
+
+        // Get existing custom schemas
+        $custom_schemas = get_option('softworld_schema_custom_types', array());
+
+        // Remove the schema
+        if (isset($custom_schemas[$schema_id])) {
+            unset($custom_schemas[$schema_id]);
+            update_option('softworld_schema_custom_types', $custom_schemas);
+            wp_send_json_success('Custom schema deleted successfully');
+        } else {
+            wp_send_json_error('Schema not found');
+        }
+    }
+
+    /**
+     * AJAX handler to get custom schema
+     */
+    public function ajax_get_custom_schema()
+    {
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'softworld_schema_nonce')) {
+            wp_send_json_error('Invalid nonce');
+        }
+
+        // Check permissions
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Insufficient permissions');
+        }
+
+        $schema_id = sanitize_key($_POST['id']);
+
+        // Get existing custom schemas
+        $custom_schemas = get_option('softworld_schema_custom_types', array());
+
+        if (isset($custom_schemas[$schema_id])) {
+            wp_send_json_success($custom_schemas[$schema_id]);
+        } else {
+            wp_send_json_error('Schema not found');
+        }
     }
 
     /**
@@ -815,7 +1151,8 @@ class Softworld_AI_SEO_Schema_Manager
             'breadcrumb_schema' => true,
             'sitelinks_searchbox' => true,
             'schema_post_types' => array('post', 'page'),
-            'default_page_schema' => 'WebPage'
+            'default_page_schema' => 'WebPage',
+            'enable_custom_schema' => true
         ));
         
         $kg_settings = get_option('softworld_schema_knowledge_graph', array(
@@ -832,6 +1169,18 @@ class Softworld_AI_SEO_Schema_Manager
             'enable_faq_schema' => false,
             'enable_howto_schema' => false
         ));
+        
+        $custom_schema_types = get_option('softworld_schema_custom_types', array());
+        
+        // Output the script directly if it wasn't enqueued properly
+        echo '<script>
+        if (typeof softworldSchema === "undefined") {
+            var softworldSchema = {
+                ajaxurl: "' . admin_url('admin-ajax.php') . '",
+                nonce: "' . wp_create_nonce('softworld_schema_nonce') . '"
+            };
+        }
+        </script>';
         
         include plugin_dir_path(__FILE__) . '../templates/schema-settings-template.php';
     }

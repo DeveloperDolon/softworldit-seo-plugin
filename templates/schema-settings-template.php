@@ -11,6 +11,7 @@ if (!defined('ABSPATH')) {
 $global_settings = get_option('softworld_schema_global_settings', array());
 $kg_settings = get_option('softworld_schema_knowledge_graph', array());
 $schema_types_settings = get_option('softworld_schema_types_settings', array());
+$custom_schema_types = get_option('softworld_schema_custom_types', array());
 ?>
 
 <div class="wrap">
@@ -80,6 +81,19 @@ $schema_types_settings = get_option('softworld_schema_types_settings', array());
                                 Enable sitelinks searchbox
                             </label>
                             <p class="description">Add search functionality to your Google search result snippet.</p>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <th scope="row">Enable Custom Schema</th>
+                        <td>
+                            <label class="softworld-checkbox-label">
+                                <input type="checkbox" name="softworld_schema_global_settings[enable_custom_schema]" value="1"
+                                    <?php checked(!empty($global_settings['enable_custom_schema'])); ?>>
+                                <span class="checkmark"></span>
+                                Enable custom schema markup
+                            </label>
+                            <p class="description">Allow creation and use of custom schema types.</p>
                         </td>
                     </tr>
                 </table>
@@ -310,6 +324,111 @@ $schema_types_settings = get_option('softworld_schema_types_settings', array());
                 </table>
             </div>
 
+            <!-- Custom Schema Settings -->
+            <div class="softworld-schema-section">
+                <h2>Custom Schema Types</h2>
+                <p class="description">Create and manage custom schema types for specialized content.</p>
+
+                <div id="custom-schema-container">
+                    <?php if (!empty($custom_schema_types)): ?>
+                        <?php foreach ($custom_schema_types as $key => $schema): ?>
+                        <div class="custom-schema-item" data-id="<?php echo esc_attr($key); ?>">
+                            <h3><?php echo esc_html($schema['name']); ?> <small>(<?php echo esc_html($schema['type']); ?>)</small></h3>
+                            <p><?php echo esc_html($schema['description']); ?></p>
+                            <div class="custom-schema-actions">
+                                <button type="button" class="button edit-custom-schema" data-id="<?php echo esc_attr($key); ?>">Edit</button>
+                                <button type="button" class="button button-danger delete-custom-schema" data-id="<?php echo esc_attr($key); ?>">Delete</button>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <p>No custom schema types defined yet.</p>
+                    <?php endif; ?>
+                </div>
+
+                <button type="button" class="button button-primary" id="add-custom-schema">Add Custom Schema Type</button>
+
+                <!-- Custom Schema Form (hidden by default) -->
+                <div id="custom-schema-form" style="display: none; margin-top: 20px; padding: 20px; border: 1px solid #ddd; background: #f9f9f9;">
+                    <h3>Add/Edit Custom Schema</h3>
+                    
+                    <input type="hidden" id="custom-schema-id" value="">
+                    
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row"><label for="custom-schema-name">Schema Name</label></th>
+                            <td>
+                                <input type="text" id="custom-schema-name" class="regular-text" placeholder="e.g., Course, Event, Product">
+                                <p class="description">A descriptive name for your custom schema type.</p>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <th scope="row"><label for="custom-schema-type">Schema.org Type</label></th>
+                            <td>
+                                <input type="text" id="custom-schema-type" class="regular-text" placeholder="e.g., Course, Event, Product">
+                                <p class="description">The official Schema.org type name.</p>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <th scope="row"><label for="custom-schema-description">Description</label></th>
+                            <td>
+                                <textarea id="custom-schema-description" class="regular-text" rows="3" placeholder="Describe what this schema type is used for"></textarea>
+                            </td>
+                        </tr>
+                    </table>
+                    
+                    <h4>Properties</h4>
+                    <div id="custom-schema-properties">
+                        <div class="schema-property">
+                            <table class="form-table">
+                                <tr>
+                                    <th scope="row"><label>Property Name</label></th>
+                                    <td><input type="text" class="property-name regular-text" placeholder="e.g., instructor, startDate"></td>
+                                </tr>
+                                <tr>
+                                    <th scope="row"><label>Data Type</label></th>
+                                    <td>
+                                        <select class="property-type">
+                                            <option value="text">Text</option>
+                                            <option value="number">Number</option>
+                                            <option value="date">Date</option>
+                                            <option value="url">URL</option>
+                                            <option value="textarea">Long Text</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row"><label>Required</label></th>
+                                    <td>
+                                        <label>
+                                            <input type="checkbox" class="property-required">
+                                            This property is required
+                                        </label>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row"><label>Description</label></th>
+                                    <td>
+                                        <textarea class="property-description regular-text" rows="2" placeholder="Description of this property"></textarea>
+                                    </td>
+                                </tr>
+                            </table>
+                            <button type="button" class="button remove-property">Remove Property</button>
+                            <hr>
+                        </div>
+                    </div>
+                    
+                    <button type="button" class="button" id="add-property">Add Property</button>
+                    
+                    <div class="custom-schema-form-actions" style="margin-top: 20px;">
+                        <button type="button" class="button button-primary" id="save-custom-schema">Save Schema</button>
+                        <button type="button" class="button" id="cancel-custom-schema">Cancel</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Schema Types Information -->
             <div class="softworld-schema-section">
                 <h2>Available Schema Types</h2>
@@ -502,6 +621,41 @@ $schema_types_settings = get_option('softworld_schema_types_settings', array());
     .remove-media-button {
         margin-left: 5px;
     }
+    
+    .custom-schema-item {
+        border: 1px solid #ddd;
+        padding: 15px;
+        margin-bottom: 15px;
+        border-radius: 4px;
+        background: #f9f9f9;
+    }
+    
+    .custom-schema-actions {
+        margin-top: 10px;
+    }
+    
+    .button-danger {
+        background: #dc3232;
+        border-color: #dc3232;
+        color: white;
+    }
+    
+    .button-danger:hover {
+        background: #f00;
+        border-color: #f00;
+        color: white;
+    }
+    
+    .schema-property {
+        margin-bottom: 20px;
+        padding: 15px;
+        background: white;
+        border: 1px solid #ddd;
+    }
+    
+    .required {
+        color: red;
+    }
 </style>
 
 <script>
@@ -520,6 +674,272 @@ $schema_types_settings = get_option('softworld_schema_types_settings', array());
                     orgFields.style.display = 'none';
                     personFields.style.display = 'block';
                 }
+            });
+        });
+        
+        // Custom Schema functionality
+        var customSchemaForm = document.getElementById('custom-schema-form');
+        var addCustomSchemaBtn = document.getElementById('add-custom-schema');
+        var saveCustomSchemaBtn = document.getElementById('save-custom-schema');
+        var cancelCustomSchemaBtn = document.getElementById('cancel-custom-schema');
+        var addPropertyBtn = document.getElementById('add-property');
+        var propertiesContainer = document.getElementById('custom-schema-properties');
+        
+        // Show custom schema form
+        addCustomSchemaBtn.addEventListener('click', function() {
+            customSchemaForm.style.display = 'block';
+            // Reset form
+            document.getElementById('custom-schema-id').value = '';
+            document.getElementById('custom-schema-name').value = '';
+            document.getElementById('custom-schema-type').value = '';
+            document.getElementById('custom-schema-description').value = '';
+            // Clear properties except the first one
+            var properties = propertiesContainer.querySelectorAll('.schema-property');
+            for (var i = 1; i < properties.length; i++) {
+                properties[i].remove();
+            }
+            // Reset first property
+            var firstProperty = properties[0];
+            firstProperty.querySelector('.property-name').value = '';
+            firstProperty.querySelector('.property-type').value = 'text';
+            firstProperty.querySelector('.property-required').checked = false;
+            firstProperty.querySelector('.property-description').value = '';
+        });
+        
+        // Cancel custom schema form
+        cancelCustomSchemaBtn.addEventListener('click', function() {
+            customSchemaForm.style.display = 'none';
+        });
+        
+        // Add property
+        addPropertyBtn.addEventListener('click', function() {
+            var propertyTemplate = propertiesContainer.querySelector('.schema-property').cloneNode(true);
+            // Clear values
+            propertyTemplate.querySelector('.property-name').value = '';
+            propertyTemplate.querySelector('.property-type').value = 'text';
+            propertyTemplate.querySelector('.property-required').checked = false;
+            propertyTemplate.querySelector('.property-description').value = '';
+            // Add remove event
+            propertyTemplate.querySelector('.remove-property').addEventListener('click', function() {
+                propertyTemplate.remove();
+            });
+            propertiesContainer.appendChild(propertyTemplate);
+        });
+        
+        // Remove property event delegation
+        propertiesContainer.addEventListener('click', function(e) {
+            if (e.target.classList.contains('remove-property')) {
+                // Don't remove the last property
+                if (propertiesContainer.querySelectorAll('.schema-property').length > 1) {
+                    e.target.closest('.schema-property').remove();
+                }
+            }
+        });
+        
+        // Save custom schema
+        // Update the saveCustomSchemaBtn click event handler
+            saveCustomSchemaBtn.addEventListener('click', function() {
+                var schemaId = document.getElementById('custom-schema-id').value || 'schema_' + Date.now();
+                var schemaName = document.getElementById('custom-schema-name').value;
+                var schemaType = document.getElementById('custom-schema-type').value;
+                var schemaDescription = document.getElementById('custom-schema-description').value;
+                
+                if (!schemaName || !schemaType) {
+                    alert('Please provide both a schema name and type.');
+                    return;
+                }
+                
+                // Collect properties
+                var properties = [];
+                var propertyElements = propertiesContainer.querySelectorAll('.schema-property');
+                
+                propertyElements.forEach(function(propertyEl) {
+                    var name = propertyEl.querySelector('.property-name').value;
+                    if (name) {
+                        properties.push({
+                            name: name,
+                            type: propertyEl.querySelector('.property-type').value,
+                            required: propertyEl.querySelector('.property-required').checked,
+                            description: propertyEl.querySelector('.property-description').value
+                        });
+                    }
+                });
+                
+                // Show loading state
+                saveCustomSchemaBtn.textContent = 'Saving...';
+                saveCustomSchemaBtn.disabled = true;
+                
+                // Send AJAX request
+                jQuery.post(softworldSchema.ajaxurl, {
+                    action: 'save_custom_schema',
+                    nonce: softworldSchema.nonce,
+                    id: schemaId,
+                    schema: {
+                        name: schemaName,
+                        type: schemaType,
+                        description: schemaDescription,
+                        properties: properties
+                    }
+                }, function(response) {
+                    // Restore button state
+                    saveCustomSchemaBtn.textContent = 'Save Schema';
+                    saveCustomSchemaBtn.disabled = false;
+                    
+                    if (response.success) {
+                        alert('Custom schema saved successfully!');
+                        customSchemaForm.style.display = 'none';
+                        location.reload(); // Reload to show the new schema
+                    } else {
+                        alert('Error: ' + response.data);
+                    }
+                }).fail(function() {
+                    // Restore button state on failure
+                    saveCustomSchemaBtn.textContent = 'Save Schema';
+                    saveCustomSchemaBtn.disabled = false;
+                    alert('An error occurred while saving the schema.');
+                });
+            });
+
+        // Edit custom schema
+        document.querySelectorAll('.edit-custom-schema').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var schemaId = this.getAttribute('data-id');
+                
+                // Fetch schema data via AJAX
+                jQuery.post(softworldSchema.ajaxurl, {
+                    action: 'get_custom_schema',
+                    nonce: softworldSchema.nonce,
+                    id: schemaId
+                }, function(response) {
+                    if (response.success) {
+                        var schema = response.data;
+                        document.getElementById('custom-schema-id').value = schemaId;
+                        document.getElementById('custom-schema-name').value = schema.name;
+                        document.getElementById('custom-schema-type').value = schema.type;
+                        document.getElementById('custom-schema-description').value = schema.description;
+                        
+                        // Clear properties
+                        propertiesContainer.innerHTML = '';
+                        
+                        // Add properties
+                        if (schema.properties && Object.keys(schema.properties).length > 0) {
+                            Object.keys(schema.properties).forEach(function(propKey) {
+                                var property = schema.properties[propKey];
+                                var propertyEl = document.createElement('div');
+                                propertyEl.className = 'schema-property';
+                                propertyEl.innerHTML = `
+                                    <table class="form-table">
+                                        <tr>
+                                            <th scope="row"><label>Property Name</label></th>
+                                            <td><input type="text" class="property-name regular-text" value="${property.name}" placeholder="e.g., instructor, startDate"></td>
+                                        </tr>
+                                        <tr>
+                                            <th scope="row"><label>Data Type</label></th>
+                                            <td>
+                                                <select class="property-type">
+                                                    <option value="text" ${property.type === 'text' ? 'selected' : ''}>Text</option>
+                                                    <option value="number" ${property.type === 'number' ? 'selected' : ''}>Number</option>
+                                                    <option value="date" ${property.type === 'date' ? 'selected' : ''}>Date</option>
+                                                    <option value="url" ${property.type === 'url' ? 'selected' : ''}>URL</option>
+                                                    <option value="textarea" ${property.type === 'textarea' ? 'selected' : ''}>Long Text</option>
+                                                </select>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <th scope="row"><label>Required</label></th>
+                                            <td>
+                                                <label>
+                                                    <input type="checkbox" class="property-required" ${property.required ? 'checked' : ''}>
+                                                    This property is required
+                                                </label>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <th scope="row"><label>Description</label></th>
+                                            <td>
+                                                <textarea class="property-description regular-text" rows="2" placeholder="Description of this property">${property.description || ''}</textarea>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    <button type="button" class="button remove-property">Remove Property</button>
+                                    <hr>
+                                `;
+                                propertiesContainer.appendChild(propertyEl);
+                            });
+                        } else {
+                            // Add one empty property
+                            var propertyEl = document.createElement('div');
+                            propertyEl.className = 'schema-property';
+                            propertyEl.innerHTML = `
+                                <table class="form-table">
+                                    <tr>
+                                        <th scope="row"><label>Property Name</label></th>
+                                        <td><input type="text" class="property-name regular-text" placeholder="e.g., instructor, startDate"></td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row"><label>Data Type</label></th>
+                                        <td>
+                                            <select class="property-type">
+                                                <option value="text">Text</option>
+                                                <option value="number">Number</option>
+                                                <option value="date">Date</option>
+                                                <option value="url">URL</option>
+                                                <option value="textarea">Long Text</option>
+                                            </select>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row"><label>Required</label></th>
+                                        <td>
+                                            <label>
+                                                <input type="checkbox" class="property-required">
+                                                This property is required
+                                            </label>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row"><label>Description</label></th>
+                                        <td>
+                                            <textarea class="property-description regular-text" rows="2" placeholder="Description of this property"></textarea>
+                                        </td>
+                                    </tr>
+                                </table>
+                                <button type="button" class="button remove-property">Remove Property</button>
+                                <hr>
+                            `;
+                            propertiesContainer.appendChild(propertyEl);
+                        }
+                        
+                        customSchemaForm.style.display = 'block';
+                    } else {
+                        alert('Error: ' + response.data);
+                    }
+                });
+            });
+        });
+        
+        // Delete custom schema
+        document.querySelectorAll('.delete-custom-schema').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                if (!confirm('Are you sure you want to delete this custom schema?')) {
+                    return;
+                }
+                
+                var schemaId = this.getAttribute('data-id');
+                
+                // Send AJAX request
+                jQuery.post(softworldSchema.ajaxurl, {
+                    action: 'delete_custom_schema',
+                    nonce: softworldSchema.nonce,
+                    id: schemaId
+                }, function(response) {
+                    if (response.success) {
+                        alert('Custom schema deleted successfully!');
+                        location.reload(); // Reload to update the list
+                    } else {
+                        alert('Error: ' + response.data);
+                    }
+                });
             });
         });
     });
