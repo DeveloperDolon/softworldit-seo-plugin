@@ -31,6 +31,7 @@ require_once plugin_dir_path(__FILE__) . 'includes/crawl-optimizer.php';
 require_once plugin_dir_path(__FILE__) . 'includes/advanced-meta-boxes.php';
 require_once plugin_dir_path(__FILE__) . 'includes/variable-replacement.php';
 require_once plugin_dir_path(__FILE__) . 'includes/frontend-output.php';
+require_once plugin_dir_path(__FILE__) . 'includes/schema-manager.php';
 
 // Another services Includes
 require_once plugin_dir_path(__FILE__) . 'includes/another_services/meta-boxes.php';
@@ -53,6 +54,7 @@ class Softworld_AI_SEO_Plugin
     private $advanced_meta_boxes;
     private $frontend_output;
     private $variable_replacer;
+    private $schema_manager;
 
 
     public function __construct()
@@ -85,6 +87,7 @@ class Softworld_AI_SEO_Plugin
         $this->variable_replacer = new Softworld_AI_SEO_Variable_Replacement();
         // Initialize Frontend Output
         $this->frontend_output = new Softworld_AI_SEO_Frontend_Output($this->variable_replacer);
+        $this->schema_manager = new Softworld_AI_SEO_Schema_Manager('softworld-ai-seo');
 
         add_action('wp_ajax_softworld_search_posts', [$this, 'ajax_search_posts']);
         add_action('wp_ajax_softworld_search_pages', [$this, 'ajax_search_pages']);
@@ -333,6 +336,13 @@ class Softworld_AI_SEO_Plugin
             [],
             '1.0.0'
         );
+
+        wp_enqueue_style(
+            'softworldit-seo-schema-admin',
+            plugin_dir_url(__FILE__) . 'assets/css/schema-admin.css',
+            [],
+            '1.0.0'
+        );
     }
 
     public function admin_enqueue_scripts()
@@ -346,6 +356,7 @@ class Softworld_AI_SEO_Plugin
             '1.0.0',
             true
         );
+        
 
         wp_enqueue_script(
             'softworldit-ayc-admin-js',
@@ -372,6 +383,14 @@ class Softworld_AI_SEO_Plugin
             ],
             'host' => $host ?: ''
         ]);
+
+        wp_enqueue_script(
+            'softworldit-seo-schema-admin',
+            plugin_dir_url(__FILE__) . 'assets/js/schema-admin.js',
+            ['jquery', 'wp-media'],
+            '1.0.0',
+            true
+        );
     }
 
     public function activate()
@@ -451,6 +470,15 @@ class Softworld_AI_SEO_Plugin
             array($this, 'render_ai_settings_admin')
         );
 
+        add_submenu_page(
+            'softworld-ai-seo',
+            __('Schema Settings', 'softworld-ai-seo'),
+            __('Schema Settings', 'softworld-ai-seo'),
+            'manage_options',
+            'softworld-ai-seo-schema',
+            [$this->schema_manager, 'render_admin_page']
+        );
+
         // Add submenus for the new features
         add_submenu_page(
             'softworld-ai-seo',
@@ -478,6 +506,11 @@ class Softworld_AI_SEO_Plugin
             'softworld-ai-seo-crawl-optimizer',
             [$this->crawl_optimizer, 'render_admin_page']
         );
+    }
+
+    public function render_schema_admin()
+    {
+        $this->schema_manager->render_admin_page();
     }
 
     public function render_robots_admin()
