@@ -10,6 +10,7 @@ if (!defined('ABSPATH')) {
 // Initialize settings
 $global_settings = get_option('softworld_schema_global_settings', array());
 $kg_settings = get_option('softworld_schema_knowledge_graph', array());
+$schema_types_settings = get_option('softworld_schema_types_settings', array());
 ?>
 
 <div class="wrap">
@@ -128,12 +129,22 @@ $kg_settings = get_option('softworld_schema_knowledge_graph', array());
                             <td>
                                 <input type="url" name="softworld_schema_knowledge_graph[organization_logo]"
                                     value="<?php echo esc_attr(isset($kg_settings['organization_logo']) ? $kg_settings['organization_logo'] : ''); ?>"
-                                    class="regular-text">
+                                    class="regular-text" id="organization_logo_input">
                                 <button type="button" class="button" onclick="openMediaLibrary('organization_logo')">
                                     Select Logo
                                 </button>
+                                <button type="button" class="button remove-media-button" onclick="removeMedia('organization_logo')"
+                                    style="<?php echo empty($kg_settings['organization_logo']) ? 'display:none;' : ''; ?>">
+                                    Remove
+                                </button>
                                 <p class="description">URL to your organization's logo image (recommended: square
                                     format, at least 112x112px).</p>
+                                <?php if (!empty($kg_settings['organization_logo'])): ?>
+                                    <div class="image-preview" style="margin-top: 10px;">
+                                        <img src="<?php echo esc_url($kg_settings['organization_logo']); ?>"
+                                            style="max-width: 150px; max-height: 150px; border: 1px solid #ddd; padding: 5px;">
+                                    </div>
+                                <?php endif; ?>
                             </td>
                         </tr>
                     </table>
@@ -158,13 +169,11 @@ $kg_settings = get_option('softworld_schema_knowledge_graph', array());
                             <td>
                                 <input type="url" name="softworld_schema_knowledge_graph[person_image]"
                                     value="<?php echo esc_attr(isset($kg_settings['person_image']) ? $kg_settings['person_image'] : ''); ?>"
-                                    class="regular-text">
-                                <button type="button" class="button select-media-button"
-                                    data-target="softworld_schema_knowledge_graph[person_image]">
+                                    class="regular-text" id="person_image_input">
+                                <button type="button" class="button" onclick="openMediaLibrary('person_image')">
                                     Select Image
                                 </button>
-                                <button type="button" class="button remove-media-button"
-                                    data-target="softworld_schema_knowledge_graph[person_image]"
+                                <button type="button" class="button remove-media-button" onclick="removeMedia('person_image')"
                                     style="<?php echo empty($kg_settings['person_image']) ? 'display:none;' : ''; ?>">
                                     Remove
                                 </button>
@@ -206,6 +215,96 @@ $kg_settings = get_option('softworld_schema_knowledge_graph', array());
                                 Profile</button>
                             <p class="description">Add URLs to your social media profiles (Facebook, Twitter, LinkedIn,
                                 Instagram, etc.).</p>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Schema Types Configuration -->
+            <div class="softworld-schema-section">
+                <h2>Schema Types Configuration</h2>
+                <p class="description">Configure which schema types to enable and their default settings.</p>
+
+                <table class="form-table">
+                    <tr>
+                        <th scope="row">Enable Product Schema</th>
+                        <td>
+                            <label class="softworld-checkbox-label">
+                                <input type="checkbox" name="softworld_schema_types_settings[enable_product_schema]" value="1"
+                                    <?php checked(!empty($schema_types_settings['enable_product_schema'])); ?>>
+                                <span class="checkmark"></span>
+                                Enable Product schema markup
+                            </label>
+                            <p class="description">Enable Product schema for WooCommerce products or other product pages.</p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <th scope="row">Enable FAQ Schema</th>
+                        <td>
+                            <label class="softworld-checkbox-label">
+                                <input type="checkbox" name="softworld_schema_types_settings[enable_faq_schema]" value="1"
+                                    <?php checked(!empty($schema_types_settings['enable_faq_schema'])); ?>>
+                                <span class="checkmark"></span>
+                                Enable FAQ schema markup
+                            </label>
+                            <p class="description">Enable FAQ schema for pages with frequently asked questions.</p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <th scope="row">Enable How-To Schema</th>
+                        <td>
+                            <label class="softworld-checkbox-label">
+                                <input type="checkbox" name="softworld_schema_types_settings[enable_howto_schema]" value="1"
+                                    <?php checked(!empty($schema_types_settings['enable_howto_schema'])); ?>>
+                                <span class="checkmark"></span>
+                                Enable How-To schema markup
+                            </label>
+                            <p class="description">Enable How-To schema for tutorial and instructional content.</p>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Individual Content Settings -->
+            <div class="softworld-schema-section">
+                <h2>Individual Content Settings</h2>
+                <p class="description">Configure how schema is applied to individual content types.</p>
+
+                <table class="form-table">
+                    <tr>
+                        <th scope="row">Post Types with Schema Support</th>
+                        <td>
+                            <?php
+                            $post_types = get_post_types(array('public' => true), 'objects');
+                            $selected_post_types = isset($global_settings['schema_post_types']) ? $global_settings['schema_post_types'] : array('post', 'page');
+                            
+                            foreach ($post_types as $post_type) :
+                                if ($post_type->name === 'attachment') continue;
+                            ?>
+                                <label class="softworld-checkbox-label" style="display: block; margin-bottom: 8px;">
+                                    <input type="checkbox" name="softworld_schema_global_settings[schema_post_types][]" 
+                                        value="<?php echo esc_attr($post_type->name); ?>"
+                                        <?php checked(in_array($post_type->name, $selected_post_types)); ?>>
+                                    <span class="checkmark"></span>
+                                    <?php echo esc_html($post_type->label); ?>
+                                </label>
+                            <?php endforeach; ?>
+                            <p class="description">Select which post types should have schema markup support.</p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <th scope="row">Default Schema for Pages</th>
+                        <td>
+                            <select name="softworld_schema_global_settings[default_page_schema]" class="regular-text">
+                                <option value="WebPage" <?php selected(isset($global_settings['default_page_schema']) ? $global_settings['default_page_schema'] : '', 'WebPage'); ?>>WebPage</option>
+                                <option value="AboutPage" <?php selected(isset($global_settings['default_page_schema']) ? $global_settings['default_page_schema'] : '', 'AboutPage'); ?>>AboutPage</option>
+                                <option value="ContactPage" <?php selected(isset($global_settings['default_page_schema']) ? $global_settings['default_page_schema'] : '', 'ContactPage'); ?>>ContactPage</option>
+                                <option value="FAQPage" <?php selected(isset($global_settings['default_page_schema']) ? $global_settings['default_page_schema'] : '', 'FAQPage'); ?>>FAQPage</option>
+                            </select>
+                            <p class="description">Default schema type for pages when no specific type is set.</p>
                         </td>
                     </tr>
                 </table>
@@ -399,6 +498,10 @@ $kg_settings = get_option('softworld_schema_knowledge_graph', array());
         align-items: center;
         gap: 10px;
     }
+    
+    .remove-media-button {
+        margin-left: 5px;
+    }
 </style>
 
 <script>
@@ -428,19 +531,32 @@ $kg_settings = get_option('softworld_schema_knowledge_graph', array());
         newRow.style.marginBottom = '10px';
 
         newRow.innerHTML = `
-        <input type="url" name="softworld_schema_knowledge_graph[social_profiles][]" 
-               placeholder="https://www.facebook.com/yourpage" 
-               class="regular-text">
-        <button type="button" class="button remove-social-profile" onclick="removeSocialProfile(this)">
-            Remove
-        </button>
-    `;
+            <input type="url" name="softworld_schema_knowledge_graph[social_profiles][]" 
+                placeholder="https://www.facebook.com/yourpage" 
+                class="regular-text">
+            <button type="button" class="button remove-social-profile" onclick="removeSocialProfile(this)">
+                Remove
+            </button>
+        `;
 
         container.appendChild(newRow);
     }
 
     function removeSocialProfile(button) {
         button.closest('.social-profile-row').remove();
+    }
+    
+    function removeMedia(fieldName) {
+        var input = document.querySelector('input[name="softworld_schema_knowledge_graph[' + fieldName + ']"]');
+        input.value = '';
+        
+        var removeButton = input.nextElementSibling.nextElementSibling;
+        removeButton.style.display = 'none';
+        
+        var preview = input.parentNode.querySelector('.image-preview');
+        if (preview) {
+            preview.style.display = 'none';
+        }
     }
 
     function openMediaLibrary(fieldName) {
@@ -466,6 +582,27 @@ $kg_settings = get_option('softworld_schema_knowledge_graph', array());
             var attachment = mediaUploader.state().get('selection').first().toJSON();
             var input = document.querySelector('input[name="softworld_schema_knowledge_graph[' + fieldName + ']"]');
             input.value = attachment.url;
+            
+            // Show the remove button
+            var removeButton = input.nextElementSibling.nextElementSibling;
+            removeButton.style.display = 'inline-block';
+            
+            // Update or create the preview
+            var preview = input.parentNode.querySelector('.image-preview');
+            if (!preview) {
+                preview = document.createElement('div');
+                preview.className = 'image-preview';
+                preview.style.marginTop = '10px';
+                var img = document.createElement('img');
+                img.style.maxWidth = '150px';
+                img.style.maxHeight = '150px';
+                img.style.border = '1px solid #ddd';
+                img.style.padding = '5px';
+                preview.appendChild(img);
+                input.parentNode.appendChild(preview);
+            }
+            preview.style.display = 'block';
+            preview.querySelector('img').src = attachment.url;
         });
 
         // Open the uploader
