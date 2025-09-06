@@ -39,8 +39,11 @@ class Softworld_AI_SEO_Schema_Manager
         add_action('wp_ajax_get_schema_template', array($this, 'ajax_get_schema_template'));
         add_action('wp_ajax_apply_schema_template', array($this, 'ajax_apply_schema_template'));
 
-        // AJAX handler for testing
+        // AJAX handlers for testing and additional functionality
         add_action('wp_ajax_test_schema', array($this, 'ajax_test_schema'));
+        add_action('wp_ajax_get_all_templates', array($this, 'ajax_get_all_templates'));
+        add_action('wp_ajax_import_templates', array($this, 'ajax_import_templates'));
+        add_action('wp_ajax_test_url_schema', array($this, 'ajax_test_url_schema'));
     }
 
     /**
@@ -124,6 +127,399 @@ class Softworld_AI_SEO_Schema_Manager
         }
 
         return $sanitized;
+    }
+
+    public function ajax_get_schema_template()
+    {
+        // Verify nonce
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'softworld_schema_nonce')) {
+            wp_send_json_error('Invalid nonce');
+        }
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Insufficient permissions');
+        }
+
+        $template_id = isset($_POST['id']) ? sanitize_key($_POST['id']) : '';
+
+        if (empty($template_id)) {
+            wp_send_json_error('Template ID is required');
+        }
+
+        $templates = get_option('softworld_schema_templates', array());
+
+        if (!isset($templates[$template_id])) {
+            wp_send_json_error('Template not found');
+        }
+
+        wp_send_json_success($templates[$template_id]);
+    }
+
+    /**
+     * AJAX handler to delete schema template
+     */
+    public function ajax_delete_schema_template()
+    {
+        // Verify nonce
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'softworld_schema_nonce')) {
+            wp_send_json_error('Invalid nonce');
+        }
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Insufficient permissions');
+        }
+
+        $template_id = isset($_POST['id']) ? sanitize_key($_POST['id']) : '';
+
+        if (empty($template_id)) {
+            wp_send_json_error('Template ID is required');
+        }
+
+        $templates = get_option('softworld_schema_templates', array());
+
+        if (!isset($templates[$template_id])) {
+            wp_send_json_error('Template not found');
+        }
+
+        unset($templates[$template_id]);
+
+        $result = update_option('softworld_schema_templates', $templates);
+
+        if ($result || empty($templates)) {
+            wp_send_json_success('Template deleted successfully');
+        } else {
+            wp_send_json_error('Failed to delete template');
+        }
+    }
+
+    /**
+     * AJAX handler to apply schema template
+     */
+    public function ajax_apply_schema_template()
+    {
+        // Verify nonce
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'softworld_schema_nonce')) {
+            wp_send_json_error('Invalid nonce');
+        }
+
+        if (!current_user_can('edit_posts')) {
+            wp_send_json_error('Insufficient permissions');
+        }
+
+        $template_id = isset($_POST['template_id']) ? sanitize_key($_POST['template_id']) : '';
+        $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
+
+        if (empty($template_id) || empty($post_id)) {
+            wp_send_json_error('Template ID and Post ID are required');
+        }
+
+        $templates = get_option('softworld_schema_templates', array());
+
+        if (!isset($templates[$template_id])) {
+            wp_send_json_error('Template not found');
+        }
+
+        $template = $templates[$template_id];
+
+        // Apply template to post
+        update_post_meta($post_id, '_softworld_schema_type', $template['schema_type']);
+
+        if (!empty($template['template_data'])) {
+            update_post_meta($post_id, '_softworld_schema_data', $template['template_data']);
+        }
+
+        wp_send_json_success('Template applied successfully');
+    }
+
+    /**
+     * AJAX handler to get all templates for export
+     */
+    public function ajax_get_all_templates()
+    {
+        // Verify nonce
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'softworld_schema_nonce')) {
+            wp_send_json_error('Invalid nonce');
+        }
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Insufficient permissions');
+        }
+
+        $templates = get_option('softworld_schema_templates', array());
+        wp_send_json_success($templates);
+    }
+
+    /**
+     * AJAX handler to import templates
+     */
+    public function ajax_import_templates()
+    {
+        // Verify nonce
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'softworld_schema_nonce')) {
+            wp_send_json_error('Invalid nonce');
+        }
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Insufficient permissions');
+        }
+
+        $template_data = isset($_POST['template_data']) ? $_POST['template_data'] : '';
+
+        if (empty($template_data)) {
+            wp_send_json_error('Template data is required');
+        }
+
+        $imported_templates = json_decode(stripslashes($template_data), true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            wp_send_json_error('Invalid JSON data');
+        }
+
+        if (!is_array($imported_templates)) {
+            wp_send_json_error('Template data must be an array');
+        }
+
+        $existing_templates = get_option('softworld_schema_templates', array());
+
+        // Merge templates
+        $merged_templates = array_merge($existing_templates, $imported_templates);
+
+        $result = update_option('softworld_schema_templates', $merged_templates);
+
+        if ($result) {
+            wp_send_json_success('Templates imported successfully');
+        } else {
+            wp_send_json_error('Failed to import templates');
+        }
+    }
+
+    /**
+     * AJAX handler to test URL schema
+     */
+    public function ajax_test_url_schema()
+    {
+        // Verify nonce
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'softworld_schema_nonce')) {
+            wp_send_json_error('Invalid nonce');
+        }
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Insufficient permissions');
+        }
+
+        $url = isset($_POST['url']) ? esc_url_raw($_POST['url']) : '';
+
+        if (empty($url)) {
+            wp_send_json_error('URL is required');
+        }
+
+        // Simple validation to ensure it's a URL from the same domain
+        $site_url = site_url();
+        if (strpos($url, $site_url) !== 0) {
+            wp_send_json_error('Only URLs from your own website can be tested');
+        }
+
+        // Get the page content
+        $response = wp_remote_get($url, array(
+            'timeout' => 30,
+            'user-agent' => 'WordPress Schema Tester'
+        ));
+
+        if (is_wp_error($response)) {
+            wp_send_json_error('Failed to fetch URL: ' . $response->get_error_message());
+        }
+
+        $body = wp_remote_retrieve_body($response);
+
+        // Extract JSON-LD schema markup
+        preg_match_all('/<script type="application\/ld\+json">(.*?)<\/script>/s', $body, $matches);
+
+        if (empty($matches[1])) {
+            wp_send_json_success('<div style="color: orange;">No JSON-LD schema markup found on this page.</div>');
+        }
+
+        $output = '<h4>Found Schema Markup:</h4>';
+        foreach ($matches[1] as $index => $json) {
+            $decoded = json_decode(trim($json), true);
+            if ($decoded) {
+                $output .= '<div style="margin-bottom: 15px;">';
+                $output .= '<h5>Schema Block ' . ($index + 1) . ':</h5>';
+                $output .= '<pre style="background: #f5f5f5; padding: 10px; font-size: 12px; max-height: 200px; overflow-y: auto;">';
+                $output .= esc_html(json_encode($decoded, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+                $output .= '</pre>';
+                $output .= '</div>';
+            }
+        }
+
+        wp_send_json_success($output);
+    }
+
+    /**
+     * AJAX handler to test schema
+     */
+    public function ajax_test_schema()
+    {
+        // Verify nonce
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'softworld_schema_nonce')) {
+            wp_send_json_error('Invalid nonce');
+        }
+
+        if (!current_user_can('edit_posts')) {
+            wp_send_json_error('Insufficient permissions');
+        }
+
+        $schema_type = isset($_POST['schema_type']) ? sanitize_text_field($_POST['schema_type']) : '';
+        $schema_data = isset($_POST['schema_data']) ? $_POST['schema_data'] : array();
+        $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
+
+        if (empty($schema_type)) {
+            wp_send_json_error('Schema type is required');
+        }
+
+        // Generate schema for testing
+        $schema = $this->generate_test_schema($schema_type, $schema_data, $post_id);
+
+        if (empty($schema)) {
+            wp_send_json_error('Failed to generate schema');
+        }
+
+        // Basic validation
+        if (!isset($schema['@type']) || !isset($schema['@context'])) {
+            wp_send_json_error('Invalid schema structure');
+        }
+
+        wp_send_json_success($schema);
+    }
+
+    /**
+     * AJAX handler to get custom schema
+     */
+    public function ajax_get_custom_schema()
+    {
+        // Verify nonce
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'softworld_schema_nonce')) {
+            wp_send_json_error('Invalid nonce');
+        }
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Insufficient permissions');
+        }
+
+        $schema_id = isset($_POST['id']) ? sanitize_key($_POST['id']) : '';
+
+        if (empty($schema_id)) {
+            wp_send_json_error('Schema ID is required');
+        }
+
+        $custom_schemas = get_option('softworld_schema_custom_types', array());
+
+        if (!isset($custom_schemas[$schema_id])) {
+            wp_send_json_error('Custom schema not found');
+        }
+
+        wp_send_json_success($custom_schemas[$schema_id]);
+    }
+
+    /**
+     * AJAX handler to delete custom schema
+     */
+    public function ajax_delete_custom_schema()
+    {
+        // Verify nonce
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'softworld_schema_nonce')) {
+            wp_send_json_error('Invalid nonce');
+        }
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Insufficient permissions');
+        }
+
+        $schema_id = isset($_POST['id']) ? sanitize_key($_POST['id']) : '';
+
+        if (empty($schema_id)) {
+            wp_send_json_error('Schema ID is required');
+        }
+
+        $custom_schemas = get_option('softworld_schema_custom_types', array());
+
+        if (!isset($custom_schemas[$schema_id])) {
+            wp_send_json_error('Custom schema not found');
+        }
+
+        unset($custom_schemas[$schema_id]);
+
+        $result = update_option('softworld_schema_custom_types', $custom_schemas);
+
+        if ($result || empty($custom_schemas)) {
+            wp_send_json_success('Custom schema deleted successfully');
+        } else {
+            wp_send_json_error('Failed to delete custom schema');
+        }
+    }
+
+    /**
+     * Generate test schema
+     */
+    private function generate_test_schema($schema_type, $schema_data, $post_id)
+    {
+        $schema = array(
+            '@context' => 'https://schema.org',
+            '@type' => $schema_type
+        );
+
+        // Get post data if available
+        if ($post_id) {
+            $post = get_post($post_id);
+            if ($post) {
+                $schema['name'] = get_the_title($post);
+                $schema['description'] = get_the_excerpt($post);
+                $schema['url'] = get_permalink($post);
+            }
+        }
+
+        // Add specific schema properties based on type
+        switch ($schema_type) {
+            case 'Product':
+                if (!empty($schema_data['price'])) {
+                    $schema['offers'] = array(
+                        '@type' => 'Offer',
+                        'price' => $schema_data['price'],
+                        'priceCurrency' => !empty($schema_data['currency']) ? $schema_data['currency'] : 'USD',
+                        'availability' => 'https://schema.org/' . (!empty($schema_data['availability']) ? $schema_data['availability'] : 'InStock')
+                    );
+                }
+                break;
+
+            case 'Review':
+                if (!empty($schema_data['rating'])) {
+                    $schema['reviewRating'] = array(
+                        '@type' => 'Rating',
+                        'ratingValue' => $schema_data['rating'],
+                        'bestRating' => '5'
+                    );
+                }
+                if (!empty($schema_data['item_name'])) {
+                    $schema['itemReviewed'] = array(
+                        '@type' => 'Thing',
+                        'name' => $schema_data['item_name']
+                    );
+                }
+                break;
+
+            case 'Recipe':
+                if (!empty($schema_data['prep_time'])) {
+                    $schema['prepTime'] = 'PT' . intval($schema_data['prep_time']) . 'M';
+                }
+                if (!empty($schema_data['cook_time'])) {
+                    $schema['cookTime'] = 'PT' . intval($schema_data['cook_time']) . 'M';
+                }
+                if (!empty($schema_data['servings'])) {
+                    $schema['recipeYield'] = intval($schema_data['servings']) . ' servings';
+                }
+                break;
+        }
+
+        return $schema;
     }
 
     /**
@@ -230,17 +626,19 @@ class Softworld_AI_SEO_Schema_Manager
             wp_send_json_error('Insufficient permissions');
         }
 
-        // PHP is looking for individual $_POST parameters like 'template_name', 'template_description', etc.
-        $template_name = isset($_POST['template_name']) ? sanitize_text_field($_POST['template_name']) : ''; // <--- EXPECTS $_POST['template_name']
+        // Get template data from POST
+        $template_name = isset($_POST['template_name']) ? sanitize_text_field($_POST['template_name']) : '';
         $template_description = isset($_POST['template_description']) ? sanitize_textarea_field($_POST['template_description']) : '';
         $template_category = isset($_POST['template_category']) ? sanitize_text_field($_POST['template_category']) : 'general';
         $schema_type = isset($_POST['schema_type']) ? sanitize_text_field($_POST['schema_type']) : '';
-        $schema_data = isset($_POST['schema_data']) ? $_POST['schema_data'] : array(); // This would work if template_data was flattened
+        $schema_data = isset($_POST['schema_data']) ? $_POST['schema_data'] : array();
+        
+        // Check if this is an edit operation (template_id is provided)
+        $template_id = isset($_POST['id']) ? sanitize_key($_POST['id']) : '';
 
-
-        // ... validation ...
+        // Validation
         if (empty($template_name)) {
-            wp_send_json_error('Template name is required'); // <--- THIS IS YOUR ERROR SOURCE!
+            wp_send_json_error('Template name is required');
         }
 
         if (empty($schema_type)) {
@@ -262,21 +660,27 @@ class Softworld_AI_SEO_Schema_Manager
         // Get existing templates
         $templates = get_option('softworld_schema_templates', array());
 
-        // Generate a unique ID for the template
-        $template_id = 'template_' . sanitize_key($template_name) . '_' . time();
-
-        // Add the new template
-        $templates[$template_id] = $template;
+        // If template_id is provided and exists, update it; otherwise create new one
+        if (!empty($template_id) && isset($templates[$template_id])) {
+            // Update existing template
+            $templates[$template_id] = $template;
+            $action_message = 'Template updated successfully';
+        } else {
+            // Create new template with unique ID
+            $template_id = 'template_' . sanitize_key($template_name) . '_' . time();
+            $templates[$template_id] = $template;
+            $action_message = 'Template created successfully';
+        }
 
         // Save templates
         $result = update_option('softworld_schema_templates', $templates);
 
         if ($result) {
-            wp_send_json_success('Template saved successfully');
+            wp_send_json_success($action_message);
         } else {
             // Check if the value was actually the same (no change)
             if ($templates === get_option('softworld_schema_templates')) {
-                wp_send_json_success('Template saved successfully (no changes detected)');
+                wp_send_json_success($action_message . ' (no changes detected)');
             } else {
                 wp_send_json_error('Failed to save template');
             }

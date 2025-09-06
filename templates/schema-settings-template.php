@@ -1149,11 +1149,23 @@ $schema_templates = get_option('softworld_schema_templates', array());
         function showTemplateForm(templateData = null) {
             if (templateData) {
                 document.getElementById('template-modal-title').textContent = 'Edit Schema Template';
-                document.getElementById('template-edit-id').value = templateData.id;
-                document.getElementById('template-form-name').value = templateData.name;
-                document.getElementById('template-form-description').value = templateData.description;
-                document.getElementById('template-form-schema-type').value = templateData.schema_type;
-                document.getElementById('template-form-category').value = templateData.category;
+                document.getElementById('template-edit-id').value = templateData.id || ''; // Set the ID for editing
+                document.getElementById('template-form-name').value = templateData.name || '';
+                document.getElementById('template-form-description').value = templateData.description || '';
+                document.getElementById('template-form-schema-type').value = templateData.schema_type || '';
+                document.getElementById('template-form-category').value = templateData.category || 'general';
+                
+                // Load template properties if they exist
+                if (templateData.schema_type) {
+                    updateTemplateProperties(templateData.schema_type);
+                    
+                    // Populate the properties with existing data
+                    if (templateData.template_data) {
+                        setTimeout(function() {
+                            populateTemplateProperties(templateData.template_data);
+                        }, 100);
+                    }
+                }
             } else {
                 document.getElementById('template-modal-title').textContent = 'Create Schema Template';
                 document.getElementById('template-edit-id').value = '';
@@ -1173,9 +1185,33 @@ $schema_templates = get_option('softworld_schema_templates', array());
                 id: templateId
             }, function(response) {
                 if (response.success) {
-                    showTemplateForm(Object.assign({id: templateId}, response.data));
+                    var templateData = response.data;
+                    showTemplateForm({
+                        id: templateId,  // Make sure to pass the ID
+                        name: templateData.name,
+                        description: templateData.description,
+                        schema_type: templateData.schema_type,
+                        category: templateData.category,
+                        template_data: templateData.template_data
+                    });
                 } else {
                     alert('Error: ' + response.data);
+                }
+            });
+        }
+
+        function populateTemplateProperties(templateData) {
+            var container = document.getElementById('template-properties-container');
+            var inputs = container.querySelectorAll('input, textarea, select');
+            
+            inputs.forEach(function(input) {
+                var name = input.name;
+                if (name && name.startsWith('schema_data[')) {
+                    // Extract the property name from schema_data[property_name]
+                    var propertyName = name.replace('schema_data[', '').replace(']', '');
+                    if (templateData[propertyName]) {
+                        input.value = templateData[propertyName];
+                    }
                 }
             });
         }
@@ -1196,20 +1232,17 @@ $schema_templates = get_option('softworld_schema_templates', array());
         }
         
         function saveTemplateForm() {
-            var templateId = document.getElementById('template-edit-id').value || 'template_' + Date.now(); // Get ID first for consistency
-
+            var templateId = document.getElementById('template-edit-id').value; // Get the ID for editing
             var template_name = document.getElementById('template-form-name').value;
             var template_description = document.getElementById('template-form-description').value;
             var schema_type = document.getElementById('template-form-schema-type').value;
             var template_category = document.getElementById('template-form-category').value;
-            var template_properties_data = {}; // This will hold your schema_data
+            var template_properties_data = {};
 
             // Collect property values from the form if the section is visible
             var propertyInputs = document.querySelectorAll('#template-properties-container input, #template-properties-container textarea, #template-properties-container select');
             propertyInputs.forEach(function(input) {
-                // Ensure name starts with 'schema_data[' to match PHP's expectation later
                 if (input.name && input.value) {
-                    // Remove 'schema_data[' and ']' from the name to make it a direct key
                     var cleanedName = input.name.replace('schema_data[', '').replace(']', '');
                     template_properties_data[cleanedName] = input.value;
                 }
@@ -1220,18 +1253,23 @@ $schema_templates = get_option('softworld_schema_templates', array());
                 return;
             }
 
-            jQuery.post(softworldSchema.ajaxurl, {
+            // Prepare AJAX data
+            var ajaxData = {
                 action: 'save_schema_template',
                 nonce: softworldSchema.nonce,
-                // Send individual parameters directly
-                id: templateId, // PHP should use this for edit scenarios, though your current PHP generates a new ID
                 template_name: template_name,
                 template_description: template_description,
                 template_category: template_category,
                 schema_type: schema_type,
-                // Send the collected properties as a sub-array (jQuery.post will handle this correctly for PHP)
                 schema_data: template_properties_data
-            }, function(response) {
+            };
+
+            // Add template ID if editing
+            if (templateId) {
+                ajaxData.id = templateId;
+            }
+
+            jQuery.post(softworldSchema.ajaxurl, ajaxData, function(response) {
                 if (response.success) {
                     alert('Template saved successfully!');
                     templateFormModal.style.display = 'none';
