@@ -44,6 +44,7 @@ class Softworld_AI_SEO_Schema_Manager
         add_action('wp_ajax_get_all_templates', array($this, 'ajax_get_all_templates'));
         add_action('wp_ajax_import_templates', array($this, 'ajax_import_templates'));
         add_action('wp_ajax_test_url_schema', array($this, 'ajax_test_url_schema'));
+        add_action('wp_head', array($this, 'output_schema_markup'));
     }
 
     /**
@@ -612,6 +613,383 @@ class Softworld_AI_SEO_Schema_Manager
         }
     }
 
+    public function output_schema_markup()
+    {
+        // Get global settings
+        $global_settings = get_option('softworld_schema_global_settings', array());
+
+        // Check if schema is enabled
+        if (empty($global_settings['enable_schema'])) {
+            return;
+        }
+
+        // Generate and output schema markup based on the current page
+        $schema = $this->generate_schema_markup();
+
+        if (!empty($schema)) {
+            echo '<script type="application/ld+json">' . json_encode($schema, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) . '</script>';
+        }
+    }
+
+    private function generate_schema_markup()
+    {
+        $schema = array();
+
+        // Get settings
+        $global_settings = get_option('softworld_schema_global_settings', array());
+        $kg_settings = get_option('softworld_schema_knowledge_graph', array());
+
+        // Add Website schema on homepage
+        if (is_front_page() || is_home()) {
+            $schema[] = $this->generate_website_schema();
+        }
+
+        // Add Knowledge Graph schema
+        if (!empty($kg_settings)) {
+            $schema[] = $this->generate_knowledge_graph_schema();
+        }
+
+        // Add Breadcrumb schema if enabled
+        if (!empty($global_settings['breadcrumb_schema'])) {
+            $breadcrumb_schema = $this->generate_breadcrumb_schema();
+            if ($breadcrumb_schema) {
+                $schema[] = $breadcrumb_schema;
+            }
+        }
+
+        // Add Sitelinks Searchbox schema if enabled and on homepage
+        if (!empty($global_settings['sitelinks_searchbox']) && (is_front_page() || is_home())) {
+            $schema[] = $this->generate_sitelinks_searchbox_schema();
+        }
+
+        // Add content-specific schema
+        if (is_singular()) {
+            $post_schema = $this->generate_post_schema();
+            if ($post_schema) {
+                $schema[] = $post_schema;
+            }
+        }
+
+        return $schema;
+    }
+
+    private function generate_website_schema()
+    {
+        return array(
+            '@context' => 'https://schema.org',
+            '@type' => 'WebSite',
+            'name' => get_bloginfo('name'),
+            'url' => get_site_url(),
+            'potentialAction' => array(
+                '@type' => 'SearchAction',
+                'target' => get_site_url() . '/?s={search_term_string}',
+                'query-input' => 'required name=search_term_string'
+            )
+        );
+    }
+
+    private function generate_knowledge_graph_schema()
+    {
+        $kg_settings = get_option('softworld_schema_knowledge_graph', array());
+        $schema = array(
+            '@context' => 'https://schema.org',
+            '@type' => $kg_settings['entity_type'] === 'Person' ? 'Person' : 'Organization',
+            'url' => get_site_url()
+        );
+
+        if ($kg_settings['entity_type'] === 'Organization') {
+            if (!empty($kg_settings['organization_name'])) {
+                $schema['name'] = $kg_settings['organization_name'];
+            }
+            if (!empty($kg_settings['organization_logo'])) {
+                $schema['logo'] = $kg_settings['organization_logo'];
+            }
+        } else {
+            if (!empty($kg_settings['person_name'])) {
+                $schema['name'] = $kg_settings['person_name'];
+            }
+            if (!empty($kg_settings['person_image'])) {
+                $schema['image'] = $kg_settings['person_image'];
+            }
+        }
+
+        // Add social profiles
+        if (!empty($kg_settings['social_profiles'])) {
+            $schema['sameAs'] = array();
+            foreach ($kg_settings['social_profiles'] as $profile) {
+                if (!empty($profile)) {
+                    $schema['sameAs'][] = $profile;
+                }
+            }
+        }
+
+        return $schema;
+    }
+
+    private function generate_breadcrumb_schema()
+    {
+        if (!function_exists('yoast_breadcrumb') || !yoast_breadcrumb('', '', false)) {
+            // Fallback to WordPress navigation if Yoast isn't available
+            $items = array();
+            $home_url = home_url();
+
+            // Add homepage
+            $items[] = array(
+                '@type' => 'ListItem',
+                'position' => 1,
+                'name' => get_bloginfo('name'),
+                'item' => $home_url
+            );
+
+            if (is_singular()) {
+                $post = get_queried_object();
+                $ancestors = get_post_ancestors($post);
+                $position = 2;
+
+                // Add parent pages
+                if (!empty($ancestors)) {
+                    $ancestors = array_reverse($ancestors);
+                    foreach ($ancestors as $ancestor_id) {
+                        $items[] = array(
+                            '@type' => 'ListItem',
+                            'position' => $position++,
+                            'name' => get_the_title($ancestor_id),
+                            'item' => get_permalink($ancestor_id)
+                        );
+                    }
+                }
+
+                // Add current page
+                $items[] = array(
+                    '@type' => 'ListItem',
+                    'position' => $position,
+                    'name' => get_the_title(),
+                    'item' => get_permalink()
+                );
+            }
+
+            if (count($items) > 1) {
+                return array(
+                    '@context' => 'https://schema.org',
+                    '@type' => 'BreadcrumbList',
+                    'itemListElement' => $items
+                );
+            }
+        }
+
+        return false;
+    }
+
+    private function generate_sitelinks_searchbox_schema()
+    {
+        return array(
+            '@context' => 'https://schema.org',
+            '@type' => 'WebSite',
+            'url' => get_site_url(),
+            'potentialAction' => array(
+                '@type' => 'SearchAction',
+                'target' => get_site_url() . '/?s={search_term_string}',
+                'query-input' => 'required name=search_term_string'
+            )
+        );
+    }
+
+    private function generate_post_schema()
+    {
+        global $post;
+
+        // Get post schema settings
+        $schema_type = get_post_meta($post->ID, '_softworld_schema_type', true);
+        $schema_data = get_post_meta($post->ID, '_softworld_schema_data', true);
+
+        // If no specific schema type is set, use default
+        if (empty($schema_type)) {
+            $global_settings = get_option('softworld_schema_global_settings', array());
+
+            if ('page' === get_post_type($post)) {
+                $schema_type = !empty($global_settings['default_page_schema']) ?
+                    $global_settings['default_page_schema'] : 'WebPage';
+            } else {
+                $schema_type = !empty($global_settings['default_article_type']) ?
+                    $global_settings['default_article_type'] : 'Article';
+            }
+        }
+
+        // Base schema
+        $schema = array(
+            '@context' => 'https://schema.org',
+            '@type' => $schema_type,
+            'headline' => get_the_title(),
+            'datePublished' => get_the_date('c'),
+            'dateModified' => get_the_modified_date('c'),
+            'mainEntityOfPage' => array(
+                '@type' => 'WebPage',
+                '@id' => get_permalink()
+            )
+        );
+
+        // Add author information
+        $author_id = get_the_author_meta('ID');
+        $schema['author'] = array(
+            '@type' => 'Person',
+            'name' => get_the_author_meta('display_name', $author_id),
+            'url' => get_author_posts_url($author_id)
+        );
+
+        // Add featured image if available
+        if (has_post_thumbnail()) {
+            $thumbnail_url = get_the_post_thumbnail_url($post, 'full');
+            $schema['image'] = array(
+                '@type' => 'ImageObject',
+                'url' => $thumbnail_url,
+                'width' => 1200,
+                'height' => 800
+            );
+        }
+
+        // Add description
+        $description = get_the_excerpt();
+        if (!empty($description)) {
+            $schema['description'] = $description;
+        }
+
+        // Add publisher (organization)
+        $kg_settings = get_option('softworld_schema_knowledge_graph', array());
+        if (!empty($kg_settings['entity_type']) && $kg_settings['entity_type'] === 'Organization') {
+            $schema['publisher'] = array(
+                '@type' => 'Organization',
+                'name' => !empty($kg_settings['organization_name']) ? $kg_settings['organization_name'] : get_bloginfo('name'),
+                'logo' => array(
+                    '@type' => 'ImageObject',
+                    'url' => !empty($kg_settings['organization_logo']) ? $kg_settings['organization_logo'] : ''
+                )
+            );
+        }
+
+        // Add schema-specific data based on type
+        switch ($schema_type) {
+            case 'Product':
+                if (!empty($schema_data['price'])) {
+                    $schema['offers'] = array(
+                        '@type' => 'Offer',
+                        'price' => $schema_data['price'],
+                        'priceCurrency' => !empty($schema_data['currency']) ? $schema_data['currency'] : 'USD',
+                        'availability' => 'https://schema.org/' . (!empty($schema_data['availability']) ? $schema_data['availability'] : 'InStock')
+                    );
+                }
+                break;
+
+            case 'Review':
+                if (!empty($schema_data['rating'])) {
+                    $schema['reviewRating'] = array(
+                        '@type' => 'Rating',
+                        'ratingValue' => $schema_data['rating'],
+                        'bestRating' => '5'
+                    );
+                }
+                if (!empty($schema_data['item_name'])) {
+                    $schema['itemReviewed'] = array(
+                        '@type' => 'Thing',
+                        'name' => $schema_data['item_name']
+                    );
+                }
+                break;
+
+            case 'Recipe':
+                if (!empty($schema_data['prep_time'])) {
+                    $schema['prepTime'] = 'PT' . intval($schema_data['prep_time']) . 'M';
+                }
+                if (!empty($schema_data['cook_time'])) {
+                    $schema['cookTime'] = 'PT' . intval($schema_data['cook_time']) . 'M';
+                }
+                if (!empty($schema_data['servings'])) {
+                    $schema['recipeYield'] = intval($schema_data['servings']) . ' servings';
+                }
+                break;
+
+            case 'FAQPage':
+                if (!empty($schema_data['faq_questions'])) {
+                    $questions = explode("\n", $schema_data['faq_questions']);
+                    $faq_questions = array();
+
+                    foreach ($questions as $question) {
+                        if (!empty(trim($question))) {
+                            $faq_questions[] = array(
+                                '@type' => 'Question',
+                                'name' => trim($question),
+                                'acceptedAnswer' => array(
+                                    '@type' => 'Answer',
+                                    'text' => '' // This would need to be populated with actual answers
+                                )
+                            );
+                        }
+                    }
+
+                    if (!empty($faq_questions)) {
+                        $schema['mainEntity'] = $faq_questions;
+                    }
+                }
+                break;
+
+            case 'HowTo':
+                if (!empty($schema_data['howto_steps'])) {
+                    $steps = explode("\n", $schema_data['howto_steps']);
+                    $howto_steps = array();
+                    $step_count = 1;
+
+                    foreach ($steps as $step) {
+                        if (!empty(trim($step))) {
+                            $howto_steps[] = array(
+                                '@type' => 'HowToStep',
+                                'position' => $step_count++,
+                                'text' => trim($step)
+                            );
+                        }
+                    }
+
+                    if (!empty($howto_steps)) {
+                        $schema['step'] = $howto_steps;
+                    }
+                }
+
+                if (!empty($schema_data['howto_supplies'])) {
+                    $supplies = explode(',', $schema_data['howto_supplies']);
+                    $howto_supplies = array();
+
+                    foreach ($supplies as $supply) {
+                        if (!empty(trim($supply))) {
+                            $howto_supplies[] = array(
+                                '@type' => 'HowToSupply',
+                                'name' => trim($supply)
+                            );
+                        }
+                    }
+
+                    if (!empty($howto_supplies)) {
+                        $schema['supply'] = $howto_supplies;
+                    }
+                }
+                break;
+
+            // Handle custom schema types
+            default:
+                $custom_schema_types = get_option('softworld_schema_custom_types', array());
+                foreach ($custom_schema_types as $key => $custom_schema) {
+                    if ($custom_schema['type'] === $schema_type && !empty($schema_data['custom'][$key])) {
+                        foreach ($schema_data['custom'][$key] as $prop_key => $prop_value) {
+                            if (!empty($prop_value)) {
+                                $schema[$prop_key] = $prop_value;
+                            }
+                        }
+                        break;
+                    }
+                }
+                break;
+        }
+
+        return $schema;
+    }
+
     /**
      * AJAX handler to save schema template - UPDATED VERSION
      */
@@ -632,7 +1010,7 @@ class Softworld_AI_SEO_Schema_Manager
         $template_category = isset($_POST['template_category']) ? sanitize_text_field($_POST['template_category']) : 'general';
         $schema_type = isset($_POST['schema_type']) ? sanitize_text_field($_POST['schema_type']) : '';
         $schema_data = isset($_POST['schema_data']) ? $_POST['schema_data'] : array();
-        
+
         // Check if this is an edit operation (template_id is provided)
         $template_id = isset($_POST['id']) ? sanitize_key($_POST['id']) : '';
 

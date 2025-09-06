@@ -42,6 +42,14 @@ require_once plugin_dir_path(__FILE__) . 'includes/another_services/save_meta_bo
 require_once plugin_dir_path(__FILE__) . 'includes/another_services/setup-wizard.php';
 require_once plugin_dir_path(__FILE__) . 'includes/another_services/search-appearance.php';
 
+// ds seo redirects
+require_once plugin_dir_path(__FILE__) . 'includes/dx-seo-redirect/activator.php';
+require_once plugin_dir_path(__FILE__) . 'includes/dx-seo-redirect/deactivator.php';
+require_once plugin_dir_path(__FILE__) . 'includes/dx-seo-redirect/helpers.php';
+require_once plugin_dir_path(__FILE__) . 'includes/dx-seo-redirect/router.php';
+require_once plugin_dir_path(__FILE__) . 'includes/dx-seo-redirect/settings.php';
+require_once plugin_dir_path(__FILE__) . 'includes/dx-seo-redirect/admin-menu.php';
+
 // main plugin class
 class Softworld_AI_SEO_Plugin
 {
@@ -94,6 +102,14 @@ class Softworld_AI_SEO_Plugin
         add_action('wp_ajax_softworld_manual_ping', [$this, 'ajax_manual_ping']);
         add_shortcode('softworld_seo_title', array($this, 'seo_title_shortcode'));
         add_shortcode('softworld_seo_description', array($this, 'seo_description_shortcode'));
+
+        // REMOVE THIS LINE - it's causing the issue
+        // add_action('plugins_loaded', function() {
+        //     DXSEO_Admin_Menu::init();
+        // });
+
+        // Initialize DXSEO Admin Menu directly
+        DXSEO_Admin_Menu::init();
     }
 
     public function init()
@@ -356,7 +372,7 @@ class Softworld_AI_SEO_Plugin
             '1.0.0',
             true
         );
-        
+
 
         wp_enqueue_script(
             'softworldit-ayc-admin-js',
@@ -402,10 +418,12 @@ class Softworld_AI_SEO_Plugin
         // Add custom table for 404 logs
         Softworld_AI_SEO_Not_Found_Logger::create_log_table();
 
-        // Create custom roles
-        $this->create_custom_roles();
-
-        flush_rewrite_rules();
+        global $wp_rewrite;
+        delete_option('rewrite_rules');
+        $wp_rewrite->flush_rules(true);
+        
+        // Clear any WordPress cache
+        wp_cache_flush();
     }
 
     public function deactivate()
