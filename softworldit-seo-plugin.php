@@ -32,6 +32,7 @@ require_once plugin_dir_path(__FILE__) . 'includes/advanced-meta-boxes.php';
 require_once plugin_dir_path(__FILE__) . 'includes/variable-replacement.php';
 require_once plugin_dir_path(__FILE__) . 'includes/frontend-output.php';
 require_once plugin_dir_path(__FILE__) . 'includes/schema-manager.php';
+require_once plugin_dir_path(__FILE__) . 'includes/link-assistant.php'; 
 
 // Another services Includes
 require_once plugin_dir_path(__FILE__) . 'includes/another_services/meta-boxes.php';
@@ -63,6 +64,7 @@ class Softworld_AI_SEO_Plugin
     private $frontend_output;
     private $variable_replacer;
     private $schema_manager;
+    private $link_assistant;
 
 
     public function __construct()
@@ -96,6 +98,7 @@ class Softworld_AI_SEO_Plugin
         // Initialize Frontend Output
         $this->frontend_output = new Softworld_AI_SEO_Frontend_Output($this->variable_replacer);
         $this->schema_manager = new Softworld_AI_SEO_Schema_Manager('softworld-ai-seo');
+        $this->link_assistant = new Softworld_AI_SEO_Link_Assistant('softworld-ai-seo');
 
         add_action('wp_ajax_softworld_search_posts', [$this, 'ajax_search_posts']);
         add_action('wp_ajax_softworld_search_pages', [$this, 'ajax_search_pages']);
@@ -359,6 +362,14 @@ class Softworld_AI_SEO_Plugin
             [],
             '1.0.0'
         );
+
+          // NEW: Link Assistant CSS
+        wp_enqueue_style(
+            'softworldit-link-assistant-admin',
+            plugin_dir_url(__FILE__) . 'assets/css/link-assistant-admin.css',
+            [],
+            '1.0.0'
+        );
     }
 
     public function admin_enqueue_scripts()
@@ -407,6 +418,22 @@ class Softworld_AI_SEO_Plugin
             '1.0.0',
             true
         );
+
+               // NEW: Link Assistant JavaScript
+        wp_enqueue_script(
+            'softworldit-link-assistant-admin',
+            plugin_dir_url(__FILE__) . 'assets/js/link-assistant-admin.js',
+            ['jquery'],
+            '1.0.0',
+            true
+        );
+
+        // NEW: Localize Link Assistant script
+        wp_localize_script('softworldit-link-assistant-admin', 'softworldLinkAssistant', [
+            'nonce' => wp_create_nonce('softworld_link_assistant_nonce'),
+            'search_nonce' => wp_create_nonce('search_posts_nonce'),
+            'ajax_url' => admin_url('admin-ajax.php')
+        ]);
     }
 
     public function activate()
@@ -467,6 +494,16 @@ class Softworld_AI_SEO_Plugin
             'manage_options',
             'softworldit-seo-sitemap',
             array($this, 'render_sitemap_admin')
+        );
+
+          // NEW: Add Link Assistant submenu
+        add_submenu_page(
+            'softworld-ai-seo',
+            __('Link Assistant', 'softworld-ai-seo'),
+            __('Link Assistant', 'softworld-ai-seo'),
+            'manage_options',
+            'softworld-ai-seo-link-assistant',
+            [$this->link_assistant, 'render_admin_page']
         );
 
         // Add Robots.txt submenu
