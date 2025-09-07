@@ -32,7 +32,9 @@ require_once plugin_dir_path(__FILE__) . 'includes/advanced-meta-boxes.php';
 require_once plugin_dir_path(__FILE__) . 'includes/variable-replacement.php';
 require_once plugin_dir_path(__FILE__) . 'includes/frontend-output.php';
 require_once plugin_dir_path(__FILE__) . 'includes/schema-manager.php';
-require_once plugin_dir_path(__FILE__) . 'includes/link-assistant.php'; 
+require_once plugin_dir_path(__FILE__) . 'includes/link-assistant.php';
+require_once plugin_dir_path(__FILE__) . 'includes/advanced-settings.php';
+require_once plugin_dir_path(__FILE__) . 'includes/corn-schedule-helper.php';
 
 // Another services Includes
 require_once plugin_dir_path(__FILE__) . 'includes/another_services/meta-boxes.php';
@@ -65,7 +67,7 @@ class Softworld_AI_SEO_Plugin
     private $variable_replacer;
     private $schema_manager;
     private $link_assistant;
-
+    private $advanced_settings;
 
     public function __construct()
     {
@@ -99,6 +101,7 @@ class Softworld_AI_SEO_Plugin
         $this->frontend_output = new Softworld_AI_SEO_Frontend_Output($this->variable_replacer);
         $this->schema_manager = new Softworld_AI_SEO_Schema_Manager('softworld-ai-seo');
         $this->link_assistant = new Softworld_AI_SEO_Link_Assistant('softworld-ai-seo');
+        $this->advanced_settings = new Softworld_AI_SEO_Advanced_Settings('softworld-ai-seo');
 
         add_action('wp_ajax_softworld_search_posts', [$this, 'ajax_search_posts']);
         add_action('wp_ajax_softworld_search_pages', [$this, 'ajax_search_pages']);
@@ -125,6 +128,176 @@ class Softworld_AI_SEO_Plugin
 
         // Save meta box data
         add_action('save_post', array($this, 'save_meta_box_data'));
+        add_action('wp_ajax_softworld_get_advanced_stats', [$this, 'ajax_get_advanced_stats']);
+        add_action('wp_ajax_softworld_update_query_status', [$this, 'ajax_update_query_status']);
+        add_action('wp_ajax_softworld_get_report_data', [$this, 'ajax_get_report_data']);
+        add_action('wp_ajax_softworld_export_query_data', [$this, 'ajax_export_query_data']);
+    }
+
+    public function ajax_get_advanced_stats()
+    {
+        check_ajax_referer('softworld_advanced_settings', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Permission denied', 'softworld-ai-seo'));
+        }
+
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'softworld_query_args';
+        
+        $stats = [
+            'total_unique_urls' => 0,
+            'total_query_args' => 0,
+            'high_impact_args' => 0,
+            'recent_activity' => 0
+        ];
+
+        // Check if table exists
+        if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name) {
+            $stats['total_unique_urls'] = $wpdb->get_var("SELECT COUNT(DISTINCT url) FROM $table_name");
+            $stats['total_query_args'] = $wpdb->get_var("SELECT COUNT(*) FROM $table_name");
+            $stats['high_impact_args'] = $wpdb->get_var("SELECT COUNT(*) FROM $table_name WHERE impact_score > 50");
+            $stats['recent_activity'] = $wpdb->get_var(
+                "SELECT COUNT(*) FROM $table_name WHERE last_seen >= DATE_SUB(NOW(), INTERVAL 7 DAY)"
+            );
+        }
+
+        wp_send_json_success($stats);
+    }
+
+    public function ajax_update_query_status()
+    {
+        check_ajax_referer('softworld_advanced_settings', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Permission denied', 'softworld-ai-seo'));
+        }
+
+        $id = intval($_POST['id']);
+        $status = sanitize_text_field($_POST['status']);
+        
+        $allowed_statuses = ['new', 'reviewed', 'whitelisted', 'blacklisted'];
+        if (!in_array($status, $allowed_statuses)) {
+            wp_send_json_error(__('Invalid status', 'softworld-ai-seo'));
+        }
+
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'softworld_query_args';
+        
+        $result = $wpdb->update(
+            $table_name,
+            ['status' => $status],
+            ['id' => $id],
+            ['%s'],
+            ['%d']
+        );
+
+        if ($result !== false) {
+            wp_send_json_success(__('Status updated successfully', 'softworld-ai-seo'));
+        } else {
+            wp_send_json_error(__('Failed to update status', 'softworld-ai-seo'));
+        }
+    }
+
+    public function ajax_get_report_data()
+    {
+        check_ajax_referer('softworld_advanced_settings', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Permission denied', 'softworld-ai-seo'));
+        }
+
+        $report_id = intval($_POST['id']);
+        
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'softworld_seo_reports';
+        
+        $report = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $table_name WHERE id = %d",
+            $report_id
+        ));
+
+        if (!$report) {
+            wp_send_json_error(__('Report not found', 'softworld-ai-seo'));
+        }
+
+        $report_data = json_decode($report->report_data, true);
+        
+        $html = '<div class="report-data-viewer">';
+        $html .= '<h4>' . sprintf(__('Report Type: %s', 'softworld-ai-seo'), ucwords(str_replace('_', ' ', $report->report_type))) . '</h4>';
+        $html .= '<p><strong>' . __('Sent to:', 'softworld-ai-seo') . '</strong> ' . esc_html($report->recipient_email) . '</p>';
+        $html .= '<p><strong>' . __('Sent on:', 'softworld-ai-seo') . '</strong> ' . date('F j, Y \a\t g:i A', strtotime($report->sent_date)) . '</p>';
+        $html .= '<p><strong>' . __('Status:', 'softworld-ai-seo') . '</strong> ' . ucfirst($report->status) . '</p>';
+        
+        if ($report_data) {
+            $html .= '<h4>' . __('Report Contents:', 'softworld-ai-seo') . '</h4>';
+            $html .= '<pre style="background: #f1f3f4; padding: 15px; border-radius: 4px; max-height: 300px; overflow-y: auto;">';
+            $html .= esc_html(json_encode($report_data, JSON_PRETTY_PRINT));
+            $html .= '</pre>';
+        }
+        
+        $html .= '</div>';
+
+        wp_send_json_success($html);
+    }
+
+    public function ajax_export_query_data()
+    {
+        check_ajax_referer('softworld_advanced_settings', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Permission denied', 'softworld-ai-seo'));
+        }
+
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'softworld_query_args';
+        
+        $results = $wpdb->get_results(
+            "SELECT url, query_args, hit_count, impact_score, status, first_seen, last_seen 
+             FROM $table_name 
+             ORDER BY last_seen DESC",
+            ARRAY_A
+        );
+
+        if (empty($results)) {
+            wp_die(__('No data to export', 'softworld-ai-seo'));
+        }
+
+        // Set headers for CSV download
+        header('Content-Type: text/csv');
+        header('Content-Disposition: attachment; filename="query-args-data-' . date('Y-m-d') . '.csv"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        $output = fopen('php://output', 'w');
+        
+        // Add CSV headers
+        fputcsv($output, [
+            'URL',
+            'Query Arguments',
+            'Hit Count',
+            'Impact Score',
+            'Status',
+            'First Seen',
+            'Last Seen'
+        ]);
+
+        // Add data rows
+        foreach ($results as $row) {
+            fputcsv($output, [
+                $row['url'],
+                $row['query_args'],
+                $row['hit_count'],
+                $row['impact_score'],
+                $row['status'],
+                $row['first_seen'],
+                $row['last_seen']
+            ]);
+        }
+
+        fclose($output);
+        exit;
     }
 
     // Keep these helper methods if you need them:
@@ -363,10 +536,17 @@ class Softworld_AI_SEO_Plugin
             '1.0.0'
         );
 
-          // NEW: Link Assistant CSS
+        // NEW: Link Assistant CSS
         wp_enqueue_style(
             'softworldit-link-assistant-admin',
             plugin_dir_url(__FILE__) . 'assets/css/link-assistant-admin.css',
+            [],
+            '1.0.0'
+        );
+
+        wp_enqueue_style(
+            'softworldit-advanced-settings-css',
+            plugin_dir_url(__FILE__) . 'assets/css/advanced-settings.css',
             [],
             '1.0.0'
         );
@@ -419,7 +599,7 @@ class Softworld_AI_SEO_Plugin
             true
         );
 
-               // NEW: Link Assistant JavaScript
+        // NEW: Link Assistant JavaScript
         wp_enqueue_script(
             'softworldit-link-assistant-admin',
             plugin_dir_url(__FILE__) . 'assets/js/link-assistant-admin.js',
@@ -434,6 +614,28 @@ class Softworld_AI_SEO_Plugin
             'search_nonce' => wp_create_nonce('search_posts_nonce'),
             'ajax_url' => admin_url('admin-ajax.php')
         ]);
+
+        // Add Advanced Settings JavaScript
+        wp_enqueue_script(
+            'softworldit-advanced-settings-js',
+            plugin_dir_url(__FILE__) . 'assets/js/advanced-settings.js',
+            ['jquery'],
+            '1.0.0',
+            true
+        );
+
+        // Localize Advanced Settings script
+        wp_localize_script('softworldit-advanced-settings-js', 'softworldAdvancedSettings', [
+            'nonce' => wp_create_nonce('softworld_advanced_settings'),
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'i18n' => [
+                'sending' => __('Sending...', 'softworld-ai-seo'),
+                'success' => __('Success!', 'softworld-ai-seo'),
+                'error' => __('Error occurred', 'softworld-ai-seo'),
+                'confirm_clear' => __('Are you sure you want to clear old logs?', 'softworld-ai-seo'),
+                'unsaved_changes' => __('You have unsaved changes. Are you sure you want to leave?', 'softworld-ai-seo')
+            ]
+        ]);
     }
 
     public function activate()
@@ -444,11 +646,12 @@ class Softworld_AI_SEO_Plugin
         Softworld_AI_SEO_Redirect_Manager::create_redirects_table();
         // Add custom table for 404 logs
         Softworld_AI_SEO_Not_Found_Logger::create_log_table();
+        $this->advanced_settings->create_tables();
 
         global $wp_rewrite;
         delete_option('rewrite_rules');
         $wp_rewrite->flush_rules(true);
-        
+
         // Clear any WordPress cache
         wp_cache_flush();
     }
@@ -496,7 +699,7 @@ class Softworld_AI_SEO_Plugin
             array($this, 'render_sitemap_admin')
         );
 
-          // NEW: Add Link Assistant submenu
+        // NEW: Add Link Assistant submenu
         add_submenu_page(
             'softworld-ai-seo',
             __('Link Assistant', 'softworld-ai-seo'),
@@ -560,6 +763,15 @@ class Softworld_AI_SEO_Plugin
             'manage_options',
             'softworld-ai-seo-crawl-optimizer',
             [$this->crawl_optimizer, 'render_admin_page']
+        );
+
+        add_submenu_page(
+            'softworld-ai-seo',
+            __('Advanced Settings', 'softworld-ai-seo'),
+            __('Advanced Settings', 'softworld-ai-seo'),
+            'manage_options',
+            'softworld-ai-seo-advanced-settings',
+            [$this->advanced_settings, 'render_admin_page']
         );
     }
 

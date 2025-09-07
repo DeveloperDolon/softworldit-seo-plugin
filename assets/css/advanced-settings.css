@@ -1,0 +1,350 @@
+/* Advanced Settings Styles */
+.softworld-advanced-settings {
+    max-width: 1200px;
+}
+
+.softworld-settings-container {
+    display: grid;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.softworld-settings-section {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    padding: 20px;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.softworld-settings-section h2 {
+    margin: 0 0 15px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1d2327;
+    border-bottom: 1px solid #dcdcde;
+    padding-bottom: 8px;
+}
+
+/* Toggle Switch Styles */
+.softworld-toggle {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 24px;
+}
+
+.softworld-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 24px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #2271b1;
+}
+
+input:focus + .slider {
+    box-shadow: 0 0 1px #2271b1;
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+/* Stats Grid */
+.softworld-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.stat-card {
+    background: #f8f9fa;
+    border: 1px solid #e1e5e9;
+    border-radius: 6px;
+    padding: 20px;
+    text-align: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.stat-card h3 {
+    font-size: 24px;
+    font-weight: bold;
+    margin: 0 0 5px 0;
+    color: #0073aa;
+}
+
+.stat-card p {
+    margin: 0;
+    color: #646970;
+    font-size: 13px;
+}
+
+/* Query Args Table */
+.query-args-table-container {
+    margin-top: 20px;
+}
+
+.table-actions {
+    margin-bottom: 15px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.impact-score {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: bold;
+    text-align: center;
+    min-width: 30px;
+}
+
+.impact-high {
+    background: #d63638;
+    color: white;
+}
+
+.impact-medium {
+    background: #dba617;
+    color: white;
+}
+
+.impact-low {
+    background: #00a32a;
+    color: white;
+}
+
+.status-new {
+    color: #d63638;
+    font-weight: 600;
+}
+
+.status-reviewed {
+    color: #dba617;
+    font-weight: 600;
+}
+
+.status-whitelisted {
+    color: #00a32a;
+    font-weight: 600;
+}
+
+.status-blacklisted {
+    color: #646970;
+    font-weight: 600;
+}
+
+.status-sent {
+    color: #00a32a;
+    font-weight: 600;
+}
+
+.status-failed {
+    color: #d63638;
+    font-weight: 600;
+}
+
+/* Reports Table */
+.reports-table-container {
+    margin-top: 20px;
+}
+
+/* Form Elements */
+.softworld-settings-section .form-table th {
+    width: 200px;
+    font-weight: 600;
+    vertical-align: top;
+    padding-top: 15px;
+}
+
+.softworld-settings-section .form-table td {
+    padding-bottom: 20px;
+}
+
+.softworld-settings-section fieldset label {
+    display: block;
+    margin-bottom: 8px;
+}
+
+.softworld-settings-section fieldset input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+/* Test Email Status */
+#test-email-status {
+    margin-left: 10px;
+    font-weight: 600;
+}
+
+#test-email-status.success {
+    color: #00a32a;
+}
+
+#test-email-status.error {
+    color: #d63638;
+}
+
+#test-email-status.loading {
+    color: #0073aa;
+}
+
+/* Responsive Design */
+@media (max-width: 782px) {
+    .softworld-stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .table-actions {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .softworld-settings-section .form-table th,
+    .softworld-settings-section .form-table td {
+        display: block;
+        width: 100%;
+        padding: 10px 0;
+    }
+    
+    .softworld-settings-section .form-table th {
+        font-weight: 600;
+        padding-bottom: 5px;
+    }
+}
+
+/* Loading States */
+.softworld-loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.softworld-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #0073aa;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-right: 8px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Notifications */
+.softworld-notification {
+    padding: 12px 16px;
+    margin: 15px 0;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.softworld-notification.success {
+    background: #d1e7dd;
+    color: #0a3622;
+    border: 1px solid #a3cfbb;
+}
+
+.softworld-notification.error {
+    background: #f8d7da;
+    color: #58151c;
+    border: 1px solid #f1aeb5;
+}
+
+.softworld-notification.warning {
+    background: #fff3cd;
+    color: #664d03;
+    border: 1px solid #ffecb5;
+}
+
+/* Code snippets */
+code {
+    background: #f1f3f4;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 13px;
+    word-break: break-all;
+}
+
+/* Button improvements */
+.button.loading {
+    position: relative;
+    color: transparent;
+}
+
+.button.loading:before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 16px;
+    height: 16px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* Accessibility improvements */
+.softworld-toggle input:focus + .slider {
+    outline: 2px solid #2271b1;
+    outline-offset: 2px;
+}
+
+.stat-card:focus {
+    outline: 2px solid #2271b1;
+    outline-offset: 2px;
+}
+
+/* High contrast support */
+@media (prefers-contrast: high) {
+    .stat-card {
+        border-width: 2px;
+    }
+    
+    .impact-score {
+        border: 2px solid currentColor;
+    }
+    
+    .softworld-toggle .slider {
+        border: 2px solid #646970;
+    }
+}

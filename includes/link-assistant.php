@@ -807,23 +807,43 @@ class Softworld_AI_SEO_Link_Assistant
 
             $related_posts = [];
 
-            // Get posts from same category/tags
-            $terms = wp_get_post_terms($post_id, ['category', 'post_tag'], ['fields' => 'ids']);
+            // Get posts from same category/tags - FIXED VERSION
+            $categories = wp_get_post_terms($post_id, 'category', ['fields' => 'ids']);
+            $tags = wp_get_post_terms($post_id, 'post_tag', ['fields' => 'ids']);
 
-            if (!empty($terms) && !is_wp_error($terms)) {
+            $tax_query = [];
+
+            if (!empty($categories) && !is_wp_error($categories)) {
+                $tax_query[] = [
+                    'taxonomy' => 'category',
+                    'field' => 'term_id',
+                    'terms' => $categories,
+                    'operator' => 'IN'
+                ];
+            }
+
+            if (!empty($tags) && !is_wp_error($tags)) {
+                $tax_query[] = [
+                    'taxonomy' => 'post_tag',
+                    'field' => 'term_id',
+                    'terms' => $tags,
+                    'operator' => 'IN'
+                ];
+            }
+
+            // Only run the query if we have taxonomies to query
+            if (!empty($tax_query)) {
+                // Set relation if we have multiple tax queries
+                if (count($tax_query) > 1) {
+                    $tax_query['relation'] = 'OR';
+                }
+
                 $related_by_terms = get_posts([
                     'post_type' => $post->post_type,
                     'post_status' => 'publish',
                     'posts_per_page' => 10,
                     'post__not_in' => [$post_id],
-                    'tax_query' => [
-                        [
-                            'taxonomy' => ['category', 'post_tag'],
-                            'field' => 'term_id',
-                            'terms' => $terms,
-                            'operator' => 'IN'
-                        ]
-                    ]
+                    'tax_query' => $tax_query
                 ]);
 
                 foreach ($related_by_terms as $related_post) {
