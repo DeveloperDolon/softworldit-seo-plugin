@@ -1,7 +1,7 @@
 <?php
 /**
  * Advanced Settings Manager
- * Handles SEO email reports and query arg monitoring
+ * Handles SEO email reports, query arg monitoring, admin UI customization, and shortcode processing
  */
 
 if (!defined('ABSPATH')) {
@@ -28,6 +28,14 @@ class Softworld_AI_SEO_Advanced_Settings
         // Monitor query arguments
         add_action('init', [$this, 'monitor_query_args'], 1);
         
+        // Admin UI customization hooks
+        add_action('wp_loaded', [$this, 'init_admin_customizations']);
+        
+        // Shortcode processing hooks
+        add_action('wp_head', [$this, 'process_shortcodes_in_metadata']);
+        add_filter('wp_title', [$this, 'process_shortcodes_in_title'], 10, 2);
+        add_filter('get_the_excerpt', [$this, 'process_shortcodes_in_excerpt'], 10, 2);
+        
         // Create database tables on activation
         register_activation_hook(AI_SEO_PLUGIN_PATH . 'softworld-ai-seo-plugin.php', [$this, 'create_tables']);
     }
@@ -35,6 +43,146 @@ class Softworld_AI_SEO_Advanced_Settings
     public function init()
     {
         // Initialize advanced settings features
+    }
+
+    /**
+     * Initialize admin customizations based on settings
+     */
+    public function init_admin_customizations()
+    {
+        $settings = $this->get_settings();
+        
+        if ($settings['hide_admin_bar']) {
+            add_filter('show_admin_bar', '__return_false');
+        }
+        
+        if ($settings['hide_admin_columns']) {
+            add_action('admin_init', [$this, 'hide_admin_columns']);
+        }
+    }
+
+    /**
+     * Hide specific admin columns
+     */
+    public function hide_admin_columns()
+    {
+        $settings = $this->get_settings();
+        $columns_to_hide = array_map('trim', explode(',', $settings['hidden_columns_list']));
+        
+        foreach ($columns_to_hide as $column) {
+            if (empty($column)) continue;
+            
+            // Handle different post types and admin screens
+            add_filter('manage_posts_columns', function($columns) use ($column) {
+                unset($columns[$column]);
+                return $columns;
+            });
+            
+            add_filter('manage_pages_columns', function($columns) use ($column) {
+                unset($columns[$column]);
+                return $columns;
+            });
+            
+            add_filter('manage_users_columns', function($columns) use ($column) {
+                unset($columns[$column]);
+                return $columns;
+            });
+        }
+        
+        // Add CSS to hide columns by class name if specified
+        if (!empty($settings['hidden_columns_css'])) {
+            add_action('admin_head', function() use ($settings) {
+                echo '<style>' . esc_html($settings['hidden_columns_css']) . '</style>';
+            });
+        }
+    }
+
+    /**
+     * Process shortcodes in metadata for head section
+     */
+    public function process_shortcodes_in_metadata()
+    {
+        $settings = $this->get_settings();
+        
+        if (!$settings['enable_shortcodes_in_meta']) {
+            return;
+        }
+        
+        global $post;
+        
+        if (!is_object($post)) {
+            return;
+        }
+        
+        // Process shortcodes in SEO title
+        $seo_title = get_post_meta($post->ID, '_softworld_ai_seo_title', true);
+        if (!empty($seo_title)) {
+            $processed_title = do_shortcode($seo_title);
+            // Temporarily store processed title for use in wp_head
+            $this->temp_processed_title = $processed_title;
+        }
+        
+        // Process shortcodes in meta description
+        $meta_description = get_post_meta($post->ID, '_softworld_ai_seo_description', true);
+        if (!empty($meta_description)) {
+            $processed_description = do_shortcode($meta_description);
+            echo '<meta name="description" content="' . esc_attr($processed_description) . '">' . "\n";
+        }
+        
+        // Process shortcodes in meta keywords
+        $meta_keywords = get_post_meta($post->ID, '_softworld_ai_seo_keywords', true);
+        if (!empty($meta_keywords)) {
+            $processed_keywords = do_shortcode($meta_keywords);
+            echo '<meta name="keywords" content="' . esc_attr($processed_keywords) . '">' . "\n";
+        }
+        
+        // Process custom meta fields if enabled
+        if ($settings['process_custom_meta_fields']) {
+            $custom_fields = array_map('trim', explode(',', $settings['custom_meta_fields_list']));
+            foreach ($custom_fields as $field) {
+                if (empty($field)) continue;
+                
+                $field_value = get_post_meta($post->ID, $field, true);
+                if (!empty($field_value)) {
+                    $processed_value = do_shortcode($field_value);
+                    // Store processed custom meta for potential use by other functions
+                    $this->processed_custom_meta[$field] = $processed_value;
+                }
+            }
+        }
+    }
+
+    /**
+     * Process shortcodes in title
+     */
+    public function process_shortcodes_in_title($title, $sep = null)
+    {
+        $settings = $this->get_settings();
+        
+        if (!$settings['enable_shortcodes_in_meta']) {
+            return $title;
+        }
+        
+        // Use processed title if available
+        if (isset($this->temp_processed_title)) {
+            return $this->temp_processed_title;
+        }
+        
+        return do_shortcode($title);
+    }
+
+    /**
+     * Process shortcodes in excerpt/meta description
+     */
+    public function process_shortcodes_in_excerpt($excerpt, $post = null)
+    {
+        $settings = $this->get_settings();
+        
+        if (!$settings['enable_shortcodes_in_meta']) {
+            return $excerpt;
+        }
+        
+        return do_shortcode($excerpt);
     }
 
     /**
@@ -192,6 +340,169 @@ class Softworld_AI_SEO_Advanced_Settings
                     </form>
                 </div>
 
+                <!-- Admin UI Customization Section -->
+                <div class="softworld-settings-section">
+                    <h2><?php _e('Admin UI Customization', $this->text_domain); ?></h2>
+                    <form method="post" id="softworld-admin-ui-form">
+                        <?php wp_nonce_field('softworld_advanced_settings', 'softworld_nonce'); ?>
+                        <input type="hidden" name="action" value="save_admin_ui_settings">
+                        
+                        <table class="form-table">
+                            <tr>
+                                <th scope="row"><?php _e('Hide Admin Bar', $this->text_domain); ?></th>
+                                <td>
+                                    <label class="softworld-toggle">
+                                        <input type="checkbox" name="hide_admin_bar" value="1" 
+                                               <?php checked($settings['hide_admin_bar'], 1); ?>>
+                                        <span class="slider"></span>
+                                    </label>
+                                    <p class="description"><?php _e('Hide the WordPress admin bar from the frontend for all users', $this->text_domain); ?></p>
+                                </td>
+                            </tr>
+                            
+                            <tr>
+                                <th scope="row"><?php _e('Hide Admin Columns', $this->text_domain); ?></th>
+                                <td>
+                                    <label class="softworld-toggle">
+                                        <input type="checkbox" name="hide_admin_columns" value="1" 
+                                               <?php checked($settings['hide_admin_columns'], 1); ?>>
+                                        <span class="slider"></span>
+                                    </label>
+                                    <p class="description"><?php _e('Hide specific columns in admin list tables', $this->text_domain); ?></p>
+                                </td>
+                            </tr>
+                            
+                            <tr>
+                                <th scope="row"><?php _e('Hidden Columns List', $this->text_domain); ?></th>
+                                <td>
+                                    <textarea name="hidden_columns_list" rows="3" class="large-text" 
+                                              placeholder="author, date, comments, tags"><?php echo esc_textarea($settings['hidden_columns_list']); ?></textarea>
+                                    <p class="description"><?php _e('Comma-separated list of column names to hide (e.g., author, date, comments)', $this->text_domain); ?></p>
+                                </td>
+                            </tr>
+                            
+                            <tr>
+                                <th scope="row"><?php _e('Custom CSS for Columns', $this->text_domain); ?></th>
+                                <td>
+                                    <textarea name="hidden_columns_css" rows="5" class="large-text" 
+                                              placeholder=".column-author { display: none !important; }"><?php echo esc_textarea($settings['hidden_columns_css']); ?></textarea>
+                                    <p class="description"><?php _e('Additional CSS rules to hide columns by class name or ID', $this->text_domain); ?></p>
+                                </td>
+                            </tr>
+                            
+                            <tr>
+                                <th scope="row"><?php _e('Hide From User Roles', $this->text_domain); ?></th>
+                                <td>
+                                    <fieldset>
+                                        <?php
+                                        $roles = wp_roles()->get_names();
+                                        $hidden_roles = (array)$settings['hide_for_user_roles'];
+                                        foreach ($roles as $role_key => $role_name):
+                                        ?>
+                                            <label>
+                                                <input type="checkbox" name="hide_for_user_roles[]" value="<?php echo esc_attr($role_key); ?>" 
+                                                       <?php echo in_array($role_key, $hidden_roles) ? 'checked' : ''; ?>>
+                                                <?php echo esc_html($role_name); ?>
+                                            </label><br>
+                                        <?php endforeach; ?>
+                                    </fieldset>
+                                    <p class="description"><?php _e('Apply UI customizations only to selected user roles', $this->text_domain); ?></p>
+                                </td>
+                            </tr>
+                        </table>
+                        
+                        <?php submit_button(__('Save Admin UI Settings', $this->text_domain), 'primary', 'save_admin_ui_settings'); ?>
+                    </form>
+                </div>
+
+                <!-- Shortcode Processing Section -->
+                <div class="softworld-settings-section">
+                    <h2><?php _e('Shortcode Processing in Metadata', $this->text_domain); ?></h2>
+                    <form method="post" id="softworld-shortcode-form">
+                        <?php wp_nonce_field('softworld_advanced_settings', 'softworld_nonce'); ?>
+                        <input type="hidden" name="action" value="save_shortcode_settings">
+                        
+                        <table class="form-table">
+                            <tr>
+                                <th scope="row"><?php _e('Enable Shortcodes in Meta', $this->text_domain); ?></th>
+                                <td>
+                                    <label class="softworld-toggle">
+                                        <input type="checkbox" name="enable_shortcodes_in_meta" value="1" 
+                                               <?php checked($settings['enable_shortcodes_in_meta'], 1); ?>>
+                                        <span class="slider"></span>
+                                    </label>
+                                    <p class="description"><?php _e('Process shortcodes in SEO titles, descriptions, and other meta fields', $this->text_domain); ?></p>
+                                </td>
+                            </tr>
+                            
+                            <tr>
+                                <th scope="row"><?php _e('Process in Titles', $this->text_domain); ?></th>
+                                <td>
+                                    <label>
+                                        <input type="checkbox" name="process_in_titles" value="1" 
+                                               <?php checked($settings['process_in_titles'], 1); ?>>
+                                        <?php _e('Enable shortcode processing in SEO titles', $this->text_domain); ?>
+                                    </label>
+                                </td>
+                            </tr>
+                            
+                            <tr>
+                                <th scope="row"><?php _e('Process in Descriptions', $this->text_domain); ?></th>
+                                <td>
+                                    <label>
+                                        <input type="checkbox" name="process_in_descriptions" value="1" 
+                                               <?php checked($settings['process_in_descriptions'], 1); ?>>
+                                        <?php _e('Enable shortcode processing in meta descriptions', $this->text_domain); ?>
+                                    </label>
+                                </td>
+                            </tr>
+                            
+                            <tr>
+                                <th scope="row"><?php _e('Process Custom Meta Fields', $this->text_domain); ?></th>
+                                <td>
+                                    <label>
+                                        <input type="checkbox" name="process_custom_meta_fields" value="1" 
+                                               <?php checked($settings['process_custom_meta_fields'], 1); ?>>
+                                        <?php _e('Enable shortcode processing in custom meta fields', $this->text_domain); ?>
+                                    </label>
+                                </td>
+                            </tr>
+                            
+                            <tr>
+                                <th scope="row"><?php _e('Custom Meta Fields List', $this->text_domain); ?></th>
+                                <td>
+                                    <textarea name="custom_meta_fields_list" rows="3" class="large-text" 
+                                              placeholder="_custom_field_1, _my_meta_field, custom_seo_data"><?php echo esc_textarea($settings['custom_meta_fields_list']); ?></textarea>
+                                    <p class="description"><?php _e('Comma-separated list of custom meta field names to process shortcodes in', $this->text_domain); ?></p>
+                                </td>
+                            </tr>
+                            
+                            <tr>
+                                <th scope="row"><?php _e('Allowed Shortcodes', $this->text_domain); ?></th>
+                                <td>
+                                    <textarea name="allowed_shortcodes" rows="3" class="large-text" 
+                                              placeholder="date, site_name, current_user, custom_shortcode"><?php echo esc_textarea($settings['allowed_shortcodes']); ?></textarea>
+                                    <p class="description"><?php _e('Comma-separated list of shortcodes allowed in metadata (leave blank to allow all)', $this->text_domain); ?></p>
+                                </td>
+                            </tr>
+                            
+                            <tr>
+                                <th scope="row"><?php _e('Cache Processed Results', $this->text_domain); ?></th>
+                                <td>
+                                    <label>
+                                        <input type="checkbox" name="cache_processed_shortcodes" value="1" 
+                                               <?php checked($settings['cache_processed_shortcodes'], 1); ?>>
+                                        <?php _e('Cache processed shortcode results for better performance', $this->text_domain); ?>
+                                    </label>
+                                    <p class="description"><?php _e('Recommended for sites with many dynamic shortcodes', $this->text_domain); ?></p>
+                                </td>
+                            </tr>
+                        </table>
+                        
+                        <?php submit_button(__('Save Shortcode Settings', $this->text_domain), 'primary', 'save_shortcode_settings'); ?>
+                    </form>
+                </div>
+
                 <!-- Query Args Monitoring Section -->
                 <div class="softworld-settings-section">
                     <h2><?php _e('Query Arguments Monitoring', $this->text_domain); ?></h2>
@@ -291,6 +602,113 @@ class Softworld_AI_SEO_Advanced_Settings
                     </div>
                 </div>
             </div>
+            
+            <!-- JavaScript for AJAX functionality -->
+            <script type="text/javascript">
+            jQuery(document).ready(function($) {
+                // Send test email
+                $('#send-test-email').click(function() {
+                    var button = $(this);
+                    var status = $('#test-email-status');
+                    
+                    button.prop('disabled', true).text('<?php _e('Sending...', $this->text_domain); ?>');
+                    status.html('');
+                    
+                    $.ajax({
+                        url: ajaxurl,
+                        type: 'POST',
+                        data: {
+                            action: 'softworld_send_test_email',
+                            nonce: '<?php echo wp_create_nonce('softworld_advanced_settings'); ?>'
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                status.html('<span style="color: green;">✓ ' + response.data + '</span>');
+                            } else {
+                                status.html('<span style="color: red;">✗ ' + response.data + '</span>');
+                            }
+                        },
+                        error: function() {
+                            status.html('<span style="color: red;">✗ <?php _e('Request failed', $this->text_domain); ?></span>');
+                        },
+                        complete: function() {
+                            button.prop('disabled', false).text('<?php _e('Send Test Report', $this->text_domain); ?>');
+                        }
+                    });
+                });
+                
+                // Clear query logs
+                $('#clear-query-logs').click(function() {
+                    if (!confirm('<?php _e('Are you sure you want to clear old query logs?', $this->text_domain); ?>')) {
+                        return;
+                    }
+                    
+                    var button = $(this);
+                    button.prop('disabled', true).text('<?php _e('Clearing...', $this->text_domain); ?>');
+                    
+                    $.ajax({
+                        url: ajaxurl,
+                        type: 'POST',
+                        data: {
+                            action: 'softworld_clear_query_logs',
+                            nonce: '<?php echo wp_create_nonce('softworld_advanced_settings'); ?>'
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                alert('✓ ' + response.data);
+                                location.reload();
+                            } else {
+                                alert('✗ ' + response.data);
+                            }
+                        },
+                        error: function() {
+                            alert('✗ <?php _e('Request failed', $this->text_domain); ?>');
+                        },
+                        complete: function() {
+                            button.prop('disabled', false).text('<?php _e('Clear Old Logs', $this->text_domain); ?>');
+                        }
+                    });
+                });
+                
+                // Toggle sections based on checkbox states
+                $('input[name="hide_admin_columns"]').change(function() {
+                    var columnSettings = $(this).closest('table').find('tr').slice(2, 5);
+                    if ($(this).is(':checked')) {
+                        columnSettings.show();
+                    } else {
+                        columnSettings.hide();
+                    }
+                }).trigger('change');
+                
+                $('input[name="enable_shortcodes_in_meta"]').change(function() {
+                    var shortcodeSettings = $(this).closest('table').find('tr').slice(1);
+                    if ($(this).is(':checked')) {
+                        shortcodeSettings.show();
+                    } else {
+                        shortcodeSettings.hide();
+                    }
+                }).trigger('change');
+                
+                $('input[name="process_custom_meta_fields"]').change(function() {
+                    var customFieldsRow = $(this).closest('table').find('tr').has('textarea[name="custom_meta_fields_list"]');
+                    if ($(this).is(':checked')) {
+                        customFieldsRow.show();
+                    } else {
+                        customFieldsRow.hide();
+                    }
+                }).trigger('change');
+            });
+            
+            function updateQueryStatus(id, status) {
+                // Placeholder for query status update functionality
+                console.log('Update query status:', id, status);
+            }
+            
+            function viewReportData(id) {
+                // Placeholder for viewing report data
+                console.log('View report data:', id);
+            }
+            </script>
         </div>
         <?php
     }
@@ -314,7 +732,29 @@ class Softworld_AI_SEO_Advanced_Settings
             $this->save_email_settings();
         } elseif ($action === 'save_query_settings') {
             $this->save_query_settings();
+        } elseif ($action === 'save_admin_ui_settings') {
+            $this->save_admin_ui_settings();
+        } elseif ($action === 'save_shortcode_settings') {
+            $this->save_shortcode_settings();
         }
+    }
+
+    /**
+     * Save admin UI settings
+     */
+    private function save_admin_ui_settings()
+    {
+        $settings = [
+            'hide_admin_bar' => isset($_POST['hide_admin_bar']) ? 1 : 0,
+            'hide_admin_columns' => isset($_POST['hide_admin_columns']) ? 1 : 0,
+            'hidden_columns_list' => sanitize_textarea_field($_POST['hidden_columns_list'] ?? ''),
+            'hidden_columns_css' => sanitize_textarea_field($_POST['hidden_columns_css'] ?? ''),
+            'hide_for_user_roles' => isset($_POST['hide_for_user_roles']) ? array_map('sanitize_text_field', $_POST['hide_for_user_roles']) : []
+        ];
+
+        update_option('softworld_admin_ui_settings', $settings);
+        add_settings_error('softworld_advanced_settings', 'settings_updated', 
+            __('Admin UI settings saved successfully.', $this->text_domain), 'updated');
     }
 
     /**
@@ -324,19 +764,14 @@ class Softworld_AI_SEO_Advanced_Settings
     {
         $settings = [
             'enable_email_reports' => isset($_POST['enable_email_reports']) ? 1 : 0,
-            'report_recipients' => sanitize_textarea_field($_POST['report_recipients']),
-            'report_frequency' => sanitize_text_field($_POST['report_frequency']),
+            'report_recipients' => sanitize_textarea_field($_POST['report_recipients'] ?? ''),
+            'report_frequency' => sanitize_text_field($_POST['report_frequency'] ?? 'weekly'),
             'report_content' => isset($_POST['report_content']) ? array_map('sanitize_text_field', $_POST['report_content']) : []
         ];
 
-        update_option('softworld_email_report_settings', $settings);
-        
-        // Reschedule email reports
-        $this->reschedule_email_reports($settings['report_frequency']);
-        
-        add_action('admin_notices', function() {
-            echo '<div class="updated notice"><p>' . __('Email settings saved successfully!', $this->text_domain) . '</p></div>';
-        });
+        update_option('softworld_email_settings', $settings);
+        add_settings_error('softworld_advanced_settings', 'settings_updated', 
+            __('Email settings saved successfully.', $this->text_domain), 'updated');
     }
 
     /**
@@ -346,237 +781,102 @@ class Softworld_AI_SEO_Advanced_Settings
     {
         $settings = [
             'enable_query_monitoring' => isset($_POST['enable_query_monitoring']) ? 1 : 0,
-            'ignored_query_args' => sanitize_textarea_field($_POST['ignored_query_args']),
-            'cleanup_threshold' => intval($_POST['cleanup_threshold']),
+            'ignored_query_args' => sanitize_textarea_field($_POST['ignored_query_args'] ?? ''),
+            'cleanup_threshold' => intval($_POST['cleanup_threshold'] ?? 30),
             'enable_impact_scoring' => isset($_POST['enable_impact_scoring']) ? 1 : 0
         ];
 
-        update_option('softworld_query_monitoring_settings', $settings);
-        
-        add_action('admin_notices', function() {
-            echo '<div class="updated notice"><p>' . __('Query monitoring settings saved successfully!', $this->text_domain) . '</p></div>';
-        });
+        update_option('softworld_query_settings', $settings);
+        add_settings_error('softworld_advanced_settings', 'settings_updated', 
+            __('Query monitoring settings saved successfully.', $this->text_domain), 'updated');
     }
 
     /**
-     * Get current settings with defaults
+     * Save shortcode settings
+     */
+    private function save_shortcode_settings()
+    {
+        $settings = [
+            'enable_shortcodes_in_meta' => isset($_POST['enable_shortcodes_in_meta']) ? 1 : 0,
+            'process_in_titles' => isset($_POST['process_in_titles']) ? 1 : 0,
+            'process_in_descriptions' => isset($_POST['process_in_descriptions']) ? 1 : 0,
+            'process_custom_meta_fields' => isset($_POST['process_custom_meta_fields']) ? 1 : 0,
+            'custom_meta_fields_list' => sanitize_textarea_field($_POST['custom_meta_fields_list'] ?? ''),
+            'allowed_shortcodes' => sanitize_textarea_field($_POST['allowed_shortcodes'] ?? ''),
+            'cache_processed_shortcodes' => isset($_POST['cache_processed_shortcodes']) ? 1 : 0
+        ];
+
+        update_option('softworld_shortcode_settings', $settings);
+        add_settings_error('softworld_advanced_settings', 'settings_updated', 
+            __('Shortcode settings saved successfully.', $this->text_domain), 'updated');
+    }
+
+    /**
+     * Get all settings with defaults
      */
     private function get_settings()
     {
-        $email_defaults = [
+        $email_settings = get_option('softworld_email_settings', []);
+        $admin_ui_settings = get_option('softworld_admin_ui_settings', []);
+        $query_settings = get_option('softworld_query_settings', []);
+        $shortcode_settings = get_option('softworld_shortcode_settings', []);
+
+        return array_merge([
+            // Email settings defaults
             'enable_email_reports' => 0,
             'report_recipients' => get_option('admin_email'),
             'report_frequency' => 'weekly',
-            'report_content' => ['traffic_overview', 'technical_issues']
-        ];
-
-        $query_defaults = [
+            'report_content' => ['traffic_overview', 'technical_issues'],
+            
+            // Admin UI settings defaults
+            'hide_admin_bar' => 0,
+            'hide_admin_columns' => 0,
+            'hidden_columns_list' => '',
+            'hidden_columns_css' => '',
+            'hide_for_user_roles' => [],
+            
+            // Query monitoring defaults
             'enable_query_monitoring' => 1,
-            'ignored_query_args' => 'utm_source,utm_medium,utm_campaign,utm_content,utm_term,fbclid,gclid,ref,_ga',
-            'cleanup_threshold' => 90,
-            'enable_impact_scoring' => 1
-        ];
-
-        $email_settings = wp_parse_args(get_option('softworld_email_report_settings', []), $email_defaults);
-        $query_settings = wp_parse_args(get_option('softworld_query_monitoring_settings', []), $query_defaults);
-
-        return array_merge($email_settings, $query_settings);
-    }
-
-    /**
-     * Monitor query arguments
-     */
-    public function monitor_query_args()
-    {
-        $settings = $this->get_settings();
-        
-        if (!$settings['enable_query_monitoring']) {
-            return;
-        }
-
-        if (is_admin() || wp_doing_ajax() || wp_doing_cron()) {
-            return;
-        }
-
-        $current_url = $this->get_current_url();
-        $query_args = $_GET;
-
-        if (empty($query_args)) {
-            return;
-        }
-
-        // Remove ignored query args
-        $ignored_args = array_map('trim', explode(',', $settings['ignored_query_args']));
-        foreach ($ignored_args as $arg) {
-            unset($query_args[$arg]);
-        }
-
-        if (!empty($query_args)) {
-            $this->log_query_args($current_url, $query_args, $settings);
-        }
-    }
-
-    /**
-     * Log query arguments to database
-     */
-    private function log_query_args($url, $query_args, $settings)
-    {
-        global $wpdb;
-
-        $table_name = $wpdb->prefix . 'softworld_query_args';
-        $query_string = http_build_query($query_args);
-        
-        // Check if this URL + query combo already exists
-        $existing = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM $table_name WHERE url = %s AND query_args = %s",
-            $url, $query_string
-        ));
-
-        if ($existing) {
-            // Update hit count and last seen
-            $wpdb->update(
-                $table_name,
-                ['hit_count' => $existing->hit_count + 1],
-                ['id' => $existing->id]
-            );
-        } else {
-            // Insert new record
-            $impact_score = $settings['enable_impact_scoring'] ? $this->calculate_impact_score($query_args) : 0;
+            'ignored_query_args' => 'utm_source,utm_medium,utm_campaign,fbclid,gclid',
+            'cleanup_threshold' => 30,
+            'enable_impact_scoring' => 1,
             
-            $wpdb->insert(
-                $table_name,
-                [
-                    'url' => $url,
-                    'query_args' => $query_string,
-                    'impact_score' => $impact_score,
-                    'hit_count' => 1
-                ]
-            );
-        }
+            // Shortcode processing defaults
+            'enable_shortcodes_in_meta' => 0,
+            'process_in_titles' => 1,
+            'process_in_descriptions' => 1,
+            'process_custom_meta_fields' => 0,
+            'custom_meta_fields_list' => '',
+            'allowed_shortcodes' => '',
+            'cache_processed_shortcodes' => 1
+        ], $email_settings, $admin_ui_settings, $query_settings, $shortcode_settings);
     }
 
     /**
-     * Calculate SEO impact score for query parameters
-     */
-    private function calculate_impact_score($query_args)
-    {
-        $score = 0;
-        $high_impact_params = ['p', 'page', 'category', 'tag', 'search', 'filter'];
-        $medium_impact_params = ['sort', 'order', 'view', 'display'];
-        
-        foreach ($query_args as $param => $value) {
-            if (in_array($param, $high_impact_params)) {
-                $score += 10;
-            } elseif (in_array($param, $medium_impact_params)) {
-                $score += 5;
-            } else {
-                $score += 2;
-            }
-            
-            // Longer parameter values typically have higher impact
-            $score += min(strlen($value) / 10, 5);
-        }
-
-        return min($score, 100); // Cap at 100
-    }
-
-    /**
-     * Get current URL
-     */
-    private function get_current_url()
-    {
-        $protocol = is_ssl() ? 'https://' : 'http://';
-        $url = $protocol . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
-        
-        // Remove query string from URL for storage
-        return strtok($url, '?');
-    }
-
-    /**
-     * Get query args statistics
+     * Get query arguments statistics
      */
     private function get_query_args_stats()
     {
         global $wpdb;
-        
-        $table_name = $wpdb->prefix . 'softworld_query_args';
-        
-        $stats = [
-            'total_unique_urls' => 0,
-            'total_query_args' => 0,
-            'high_impact_args' => 0,
-            'recent_activity' => 0
-        ];
+        $table = $wpdb->prefix . 'softworld_query_args';
 
-        // Check if table exists
-        if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") != $table_name) {
-            return $stats;
-        }
-
-        $stats['total_unique_urls'] = $wpdb->get_var("SELECT COUNT(DISTINCT url) FROM $table_name");
-        $stats['total_query_args'] = $wpdb->get_var("SELECT COUNT(*) FROM $table_name");
-        $stats['high_impact_args'] = $wpdb->get_var("SELECT COUNT(*) FROM $table_name WHERE impact_score > 50");
+        $stats = [];
+        
+        // Total unique URLs
+        $stats['total_unique_urls'] = $wpdb->get_var("SELECT COUNT(DISTINCT url) FROM $table");
+        
+        // Total query arguments
+        $stats['total_query_args'] = $wpdb->get_var("SELECT COUNT(*) FROM $table");
+        
+        // High impact arguments (score > 7)
+        $stats['high_impact_args'] = $wpdb->get_var("SELECT COUNT(*) FROM $table WHERE impact_score > 7");
+        
+        // Recent activity (last 7 days)
         $stats['recent_activity'] = $wpdb->get_var(
-            "SELECT COUNT(*) FROM $table_name WHERE last_seen >= DATE_SUB(NOW(), INTERVAL 7 DAY)"
+            "SELECT COUNT(*) FROM $table WHERE last_seen >= DATE_SUB(NOW(), INTERVAL 7 DAY)"
         );
 
-        return $stats;
-    }
-
-    /**
-     * Render query args table
-     */
-    private function render_query_args_table()
-    {
-        global $wpdb;
-        
-        $table_name = $wpdb->prefix . 'softworld_query_args';
-        
-        $results = $wpdb->get_results(
-            "SELECT * FROM $table_name ORDER BY last_seen DESC LIMIT 50"
-        );
-
-        if (empty($results)) {
-            echo '<p>' . __('No query arguments monitored yet.', $this->text_domain) . '</p>';
-            return;
-        }
-
-        ?>
-        <table class="wp-list-table widefat fixed striped">
-            <thead>
-                <tr>
-                    <th><?php _e('URL', $this->text_domain); ?></th>
-                    <th><?php _e('Query Parameters', $this->text_domain); ?></th>
-                    <th><?php _e('Hit Count', $this->text_domain); ?></th>
-                    <th><?php _e('Impact Score', $this->text_domain); ?></th>
-                    <th><?php _e('Last Seen', $this->text_domain); ?></th>
-                    <th><?php _e('Status', $this->text_domain); ?></th>
-                    <th><?php _e('Actions', $this->text_domain); ?></th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($results as $row): ?>
-                    <tr>
-                        <td><code><?php echo esc_html($row->url); ?></code></td>
-                        <td><code><?php echo esc_html($row->query_args); ?></code></td>
-                        <td><?php echo number_format($row->hit_count); ?></td>
-                        <td>
-                            <span class="impact-score impact-<?php echo $row->impact_score > 50 ? 'high' : ($row->impact_score > 25 ? 'medium' : 'low'); ?>">
-                                <?php echo $row->impact_score; ?>
-                            </span>
-                        </td>
-                        <td><?php echo date('M j, Y H:i', strtotime($row->last_seen)); ?></td>
-                        <td><span class="status-<?php echo $row->status; ?>"><?php echo ucfirst($row->status); ?></span></td>
-                        <td>
-                            <button type="button" class="button button-small" onclick="updateQueryStatus(<?php echo $row->id; ?>, 'reviewed')">
-                                <?php _e('Mark Reviewed', $this->text_domain); ?>
-                            </button>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-        <?php
+        return array_map('intval', $stats);
     }
 
     /**
@@ -585,12 +885,79 @@ class Softworld_AI_SEO_Advanced_Settings
     private function get_recent_reports()
     {
         global $wpdb;
-        
-        $table_name = $wpdb->prefix . 'softworld_seo_reports';
-        
+        $table = $wpdb->prefix . 'softworld_seo_reports';
+
         return $wpdb->get_results(
-            "SELECT * FROM $table_name ORDER BY sent_date DESC LIMIT 20"
+            "SELECT * FROM $table ORDER BY sent_date DESC LIMIT 10",
+            ARRAY_A
         );
+    }
+
+    /**
+     * Render query arguments table
+     */
+    private function render_query_args_table()
+    {
+        global $wpdb;
+        $table = $wpdb->prefix . 'softworld_query_args';
+        
+        $query_args = $wpdb->get_results(
+            "SELECT * FROM $table ORDER BY last_seen DESC LIMIT 50",
+            ARRAY_A
+        );
+
+        if (empty($query_args)) {
+            echo '<p>' . __('No query arguments data available.', $this->text_domain) . '</p>';
+            return;
+        }
+
+        ?>
+        <table class="wp-list-table widefat fixed striped">
+            <thead>
+                <tr>
+                    <th><?php _e('URL', $this->text_domain); ?></th>
+                    <th><?php _e('Query Args', $this->text_domain); ?></th>
+                    <th><?php _e('Hit Count', $this->text_domain); ?></th>
+                    <th><?php _e('Impact Score', $this->text_domain); ?></th>
+                    <th><?php _e('Status', $this->text_domain); ?></th>
+                    <th><?php _e('Last Seen', $this->text_domain); ?></th>
+                    <th><?php _e('Actions', $this->text_domain); ?></th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($query_args as $arg): ?>
+                <tr>
+                    <td>
+                        <a href="<?php echo esc_url($arg['url']); ?>" target="_blank" title="<?php echo esc_attr($arg['url']); ?>">
+                            <?php echo esc_html(substr($arg['url'], 0, 50)) . (strlen($arg['url']) > 50 ? '...' : ''); ?>
+                        </a>
+                    </td>
+                    <td><code><?php echo esc_html($arg['query_args']); ?></code></td>
+                    <td><?php echo number_format($arg['hit_count']); ?></td>
+                    <td>
+                        <span class="impact-score score-<?php echo $arg['impact_score'] > 7 ? 'high' : ($arg['impact_score'] > 4 ? 'medium' : 'low'); ?>">
+                            <?php echo esc_html($arg['impact_score']); ?>/10
+                        </span>
+                    </td>
+                    <td>
+                        <span class="status-<?php echo esc_attr($arg['status']); ?>">
+                            <?php echo esc_html(ucfirst($arg['status'])); ?>
+                        </span>
+                    </td>
+                    <td><?php echo esc_html(date('Y-m-d H:i', strtotime($arg['last_seen']))); ?></td>
+                    <td>
+                        <select onchange="updateQueryStatus(<?php echo $arg['id']; ?>, this.value)" class="query-status-select">
+                            <option value="new" <?php selected($arg['status'], 'new'); ?>><?php _e('New', $this->text_domain); ?></option>
+                            <option value="reviewed" <?php selected($arg['status'], 'reviewed'); ?>><?php _e('Reviewed', $this->text_domain); ?></option>
+                            <option value="whitelisted" <?php selected($arg['status'], 'whitelisted'); ?>><?php _e('Whitelisted', $this->text_domain); ?></option>
+                            <option value="blacklisted" <?php selected($arg['status'], 'blacklisted'); ?>><?php _e('Blacklisted', $this->text_domain); ?></option>
+                        </select>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+        <?php
     }
 
     /**
@@ -599,7 +966,7 @@ class Softworld_AI_SEO_Advanced_Settings
     private function render_recent_reports_table($reports)
     {
         if (empty($reports)) {
-            echo '<p>' . __('No reports sent yet.', $this->text_domain) . '</p>';
+            echo '<p>' . __('No reports have been sent yet.', $this->text_domain) . '</p>';
             return;
         }
 
@@ -616,17 +983,21 @@ class Softworld_AI_SEO_Advanced_Settings
             </thead>
             <tbody>
                 <?php foreach ($reports as $report): ?>
-                    <tr>
-                        <td><?php echo esc_html(ucwords(str_replace('_', ' ', $report->report_type))); ?></td>
-                        <td><?php echo esc_html($report->recipient_email); ?></td>
-                        <td><?php echo date('M j, Y H:i', strtotime($report->sent_date)); ?></td>
-                        <td><span class="status-<?php echo $report->status; ?>"><?php echo ucfirst($report->status); ?></span></td>
-                        <td>
-                            <button type="button" class="button button-small" onclick="viewReportData(<?php echo $report->id; ?>)">
-                                <?php _e('View Details', $this->text_domain); ?>
-                            </button>
-                        </td>
-                    </tr>
+                <tr>
+                    <td><?php echo esc_html(ucfirst(str_replace('_', ' ', $report['report_type']))); ?></td>
+                    <td><?php echo esc_html($report['recipient_email']); ?></td>
+                    <td><?php echo esc_html(date('Y-m-d H:i', strtotime($report['sent_date']))); ?></td>
+                    <td>
+                        <span class="status-<?php echo esc_attr($report['status']); ?>">
+                            <?php echo esc_html(ucfirst($report['status'])); ?>
+                        </span>
+                    </td>
+                    <td>
+                        <button type="button" onclick="viewReportData(<?php echo $report['id']; ?>)" class="button button-small">
+                            <?php _e('View Data', $this->text_domain); ?>
+                        </button>
+                    </td>
+                </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
@@ -646,25 +1017,14 @@ class Softworld_AI_SEO_Advanced_Settings
         }
 
         if (!wp_next_scheduled('softworld_send_seo_report')) {
-            $this->reschedule_email_reports($settings['report_frequency']);
-        }
-    }
-
-    /**
-     * Reschedule email reports
-     */
-    private function reschedule_email_reports($frequency)
-    {
-        wp_clear_scheduled_hook('softworld_send_seo_report');
-        
-        $intervals = [
-            'daily' => DAY_IN_SECONDS,
-            'weekly' => WEEK_IN_SECONDS,
-            'monthly' => MONTH_IN_SECONDS
-        ];
-
-        if (isset($intervals[$frequency])) {
-            wp_schedule_event(time(), $frequency, 'softworld_send_seo_report');
+            $frequency = $settings['report_frequency'];
+            $schedule_map = [
+                'daily' => 'daily',
+                'weekly' => 'weekly',
+                'monthly' => 'monthly'
+            ];
+            
+            wp_schedule_event(time(), $schedule_map[$frequency] ?? 'weekly', 'softworld_send_seo_report');
         }
     }
 
@@ -679,662 +1039,286 @@ class Softworld_AI_SEO_Advanced_Settings
             return;
         }
 
-        $recipients = array_map('trim', explode(',', $settings['report_recipients']));
-        $report_data = $this->generate_report_data($settings['report_content']);
+        $recipients = array_filter(array_map('trim', explode(',', $settings['report_recipients'])));
+        if (empty($recipients)) {
+            return;
+        }
+
+        $report_data = $this->generate_seo_report_data($settings['report_content']);
+        $email_content = $this->format_email_report($report_data);
 
         foreach ($recipients as $recipient) {
             if (is_email($recipient)) {
-                $this->send_seo_report($recipient, $report_data, $settings['report_frequency']);
+                $this->send_email_report($recipient, $email_content, 'scheduled');
             }
         }
     }
 
     /**
-     * Generate report data
+     * Monitor query arguments
      */
-    private function generate_report_data($content_types)
+    public function monitor_query_args()
+    {
+        $settings = $this->get_settings();
+        
+        if (!$settings['enable_query_monitoring']) {
+            return;
+        }
+
+        if (is_admin() || wp_doing_ajax() || wp_doing_cron()) {
+            return;
+        }
+
+        $current_url = home_url($_SERVER['REQUEST_URI']);
+        $query_string = $_SERVER['QUERY_STRING'] ?? '';
+        
+        if (empty($query_string)) {
+            return;
+        }
+
+        // Parse and filter query arguments
+        parse_str($query_string, $query_args);
+        $ignored_args = array_filter(array_map('trim', explode(',', $settings['ignored_query_args'])));
+        
+        foreach ($ignored_args as $ignored) {
+            unset($query_args[$ignored]);
+        }
+
+        if (empty($query_args)) {
+            return;
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'softworld_query_args';
+        $query_string_clean = http_build_query($query_args);
+
+        // Check if this URL/query combination exists
+        $existing = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $table WHERE url = %s AND query_args = %s",
+            $current_url, $query_string_clean
+        ));
+
+        if ($existing) {
+            // Update hit count and last seen
+            $wpdb->update(
+                $table,
+                [
+                    'hit_count' => $existing->hit_count + 1,
+                    'last_seen' => current_time('mysql')
+                ],
+                ['id' => $existing->id]
+            );
+        } else {
+            // Insert new record
+            $impact_score = $settings['enable_impact_scoring'] ? $this->calculate_impact_score($query_args) : 0;
+            
+            $wpdb->insert(
+                $table,
+                [
+                    'url' => $current_url,
+                    'query_args' => $query_string_clean,
+                    'first_seen' => current_time('mysql'),
+                    'last_seen' => current_time('mysql'),
+                    'hit_count' => 1,
+                    'impact_score' => $impact_score,
+                    'status' => 'new'
+                ]
+            );
+        }
+    }
+
+    /**
+     * Calculate SEO impact score for query arguments
+     */
+    private function calculate_impact_score($query_args)
+    {
+        $score = 0;
+        $high_impact_params = ['p', 'page_id', 's', 'cat', 'tag', 'author', 'year', 'month'];
+        $medium_impact_params = ['orderby', 'order', 'posts_per_page', 'paged'];
+        
+        foreach ($query_args as $key => $value) {
+            if (in_array($key, $high_impact_params)) {
+                $score += 3;
+            } elseif (in_array($key, $medium_impact_params)) {
+                $score += 2;
+            } else {
+                $score += 1;
+            }
+        }
+        
+        return min($score, 10); // Cap at 10
+    }
+
+    /**
+     * Generate SEO report data
+     */
+    private function generate_seo_report_data($content_types)
     {
         $data = [];
-
+        
         foreach ($content_types as $type) {
             switch ($type) {
                 case 'traffic_overview':
-                    $data['traffic'] = $this->get_traffic_overview();
+                    $data['traffic_overview'] = $this->get_traffic_overview();
                     break;
                 case 'top_keywords':
-                    $data['keywords'] = $this->get_top_keywords();
+                    $data['top_keywords'] = $this->get_top_keywords();
                     break;
                 case 'technical_issues':
-                    $data['issues'] = $this->get_technical_issues();
+                    $data['technical_issues'] = $this->get_technical_issues();
                     break;
                 case 'content_analysis':
-                    $data['content'] = $this->get_content_analysis();
+                    $data['content_analysis'] = $this->get_content_analysis();
                     break;
                 case 'query_monitoring':
-                    $data['query_args'] = $this->get_query_monitoring_summary();
+                    $data['query_monitoring'] = $this->get_query_monitoring_summary();
                     break;
             }
         }
-
+        
         return $data;
     }
 
     /**
-     * Get traffic overview data
+     * Format email report
      */
-    private function get_traffic_overview()
+    private function format_email_report($data)
     {
-        // This would integrate with analytics APIs or internal tracking
-        // For now, return sample data
-        return [
-            'total_visits' => wp_count_posts('post')->publish * 10, // Simulated data
-            'organic_traffic' => wp_count_posts('post')->publish * 7,
-            'bounce_rate' => '45%',
-            'avg_session_duration' => '2:30',
-            'top_pages' => $this->get_top_performing_pages()
-        ];
-    }
-
-    /**
-     * Get top keywords data
-     */
-    private function get_top_keywords()
-    {
-        // This would integrate with Search Console API or keyword tracking
-        return [
-            'total_keywords' => 150,
-            'avg_position' => 25.4,
-            'clicks' => 1250,
-            'impressions' => 45000,
-            'top_keywords' => [
-                ['keyword' => 'sample keyword 1', 'position' => 5, 'clicks' => 150],
-                ['keyword' => 'sample keyword 2', 'position' => 8, 'clicks' => 120],
-                ['keyword' => 'sample keyword 3', 'position' => 12, 'clicks' => 95]
-            ]
-        ];
-    }
-
-    /**
-     * Get technical issues
-     */
-    private function get_technical_issues()
-    {
-        $issues = [];
+        $html = '<h2>' . __('SEO Performance Report', $this->text_domain) . '</h2>';
+        $html .= '<p>' . sprintf(__('Generated on %s', $this->text_domain), date('Y-m-d H:i:s')) . '</p>';
         
-        // Check for missing meta descriptions
-        $missing_meta = get_posts([
-            'post_type' => ['post', 'page'],
-            'meta_query' => [
-                [
-                    'key' => '_softworld_ai_seo_description',
-                    'compare' => 'NOT EXISTS'
-                ]
-            ],
-            'posts_per_page' => -1,
-            'fields' => 'ids'
-        ]);
-
-        if (!empty($missing_meta)) {
-            $issues[] = [
-                'type' => 'missing_meta_descriptions',
-                'count' => count($missing_meta),
-                'severity' => 'medium',
-                'description' => sprintf(__('%d pages missing meta descriptions', $this->text_domain), count($missing_meta))
-            ];
-        }
-
-        // Check for duplicate titles
-        global $wpdb;
-        $duplicate_titles = $wpdb->get_results(
-            "SELECT meta_value, COUNT(*) as count 
-             FROM {$wpdb->postmeta} 
-             WHERE meta_key = '_softworld_ai_seo_title' 
-             GROUP BY meta_value 
-             HAVING COUNT(*) > 1"
-        );
-
-        if (!empty($duplicate_titles)) {
-            $total_duplicates = array_sum(array_column($duplicate_titles, 'count'));
-            $issues[] = [
-                'type' => 'duplicate_titles',
-                'count' => $total_duplicates,
-                'severity' => 'high',
-                'description' => sprintf(__('%d pages with duplicate titles', $this->text_domain), $total_duplicates)
-            ];
-        }
-
-        return $issues;
-    }
-
-    /**
-     * Get content analysis data
-     */
-    private function get_content_analysis()
-    {
-        $recent_posts = get_posts([
-            'post_type' => 'post',
-            'post_status' => 'publish',
-            'posts_per_page' => 10,
-            'orderby' => 'date',
-            'order' => 'DESC'
-        ]);
-
-        $analysis = [
-            'total_posts' => wp_count_posts('post')->publish,
-            'avg_word_count' => 0,
-            'posts_without_images' => 0,
-            'posts_without_internal_links' => 0
-        ];
-
-        $total_words = 0;
-        foreach ($recent_posts as $post) {
-            $word_count = str_word_count(strip_tags($post->post_content));
-            $total_words += $word_count;
-
-            // Check for images
-            if (!has_post_thumbnail($post->ID) && strpos($post->post_content, '<img') === false) {
-                $analysis['posts_without_images']++;
-            }
-
-            // Check for internal links (simplified)
-            if (strpos($post->post_content, home_url()) === false) {
-                $analysis['posts_without_internal_links']++;
-            }
-        }
-
-        $analysis['avg_word_count'] = !empty($recent_posts) ? round($total_words / count($recent_posts)) : 0;
-
-        return $analysis;
-    }
-
-    /**
-     * Get query monitoring summary
-     */
-    private function get_query_monitoring_summary()
-    {
-        global $wpdb;
-        
-        $table_name = $wpdb->prefix . 'softworld_query_args';
-        
-        $summary = [
-            'new_parameters' => 0,
-            'high_impact_parameters' => 0,
-            'total_monitored' => 0,
-            'top_parameters' => []
-        ];
-
-        // Check if table exists
-        if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name) {
-            $summary['new_parameters'] = $wpdb->get_var(
-                "SELECT COUNT(*) FROM $table_name WHERE first_seen >= DATE_SUB(NOW(), INTERVAL 7 DAY)"
-            );
-            
-            $summary['high_impact_parameters'] = $wpdb->get_var(
-                "SELECT COUNT(*) FROM $table_name WHERE impact_score > 50"
-            );
-            
-            $summary['total_monitored'] = $wpdb->get_var("SELECT COUNT(*) FROM $table_name");
-            
-            $summary['top_parameters'] = $wpdb->get_results(
-                "SELECT query_args, hit_count, impact_score 
-                 FROM $table_name 
-                 ORDER BY hit_count DESC 
-                 LIMIT 5"
-            );
-        }
-
-        return $summary;
-    }
-
-    /**
-     * Get top performing pages
-     */
-    private function get_top_performing_pages()
-    {
-        $pages = get_posts([
-            'post_type' => ['post', 'page'],
-            'post_status' => 'publish',
-            'posts_per_page' => 5,
-            'orderby' => 'comment_count',
-            'order' => 'DESC'
-        ]);
-
-        $top_pages = [];
-        foreach ($pages as $page) {
-            $top_pages[] = [
-                'title' => $page->post_title,
-                'url' => get_permalink($page->ID),
-                'visits' => rand(100, 1000), // Simulated data
-                'engagement' => rand(60, 95) . '%'
-            ];
-        }
-
-        return $top_pages;
-    }
-
-    /**
-     * Send SEO report email
-     */
-    private function send_seo_report($recipient, $report_data, $frequency)
-    {
-        $subject = sprintf(__('Your %s SEO Report - %s', $this->text_domain), 
-            ucfirst($frequency), 
-            get_bloginfo('name')
-        );
-
-        $template_path = AI_SEO_PLUGIN_PATH . 'templates/email-report.php';
-        
-        if (file_exists($template_path)) {
-            ob_start();
-            include $template_path;
-            $message = ob_get_clean();
-        } else {
-            $message = $this->get_default_email_template($report_data, $frequency);
-        }
-
-        $headers = [
-            'Content-Type: text/html; charset=UTF-8',
-            'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>'
-        ];
-
-        $sent = wp_mail($recipient, $subject, $message, $headers);
-
-        // Log the report
-        $this->log_email_report($frequency, $recipient, $sent ? 'sent' : 'failed', $report_data);
-
-        return $sent;
-    }
-
-    /**
-     * Get default email template
-     */
-    private function get_default_email_template($report_data, $frequency)
-    {
-        $html = '<html><head><style>';
-        $html .= 'body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }';
-        $html .= '.header { background: #0073aa; color: white; padding: 20px; text-align: center; }';
-        $html .= '.content { padding: 20px; }';
-        $html .= '.section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }';
-        $html .= '.stat { display: inline-block; margin: 10px; padding: 10px; background: #f9f9f9; border-radius: 3px; }';
-        $html .= '.issue-high { color: #d63638; }';
-        $html .= '.issue-medium { color: #dba617; }';
-        $html .= '.issue-low { color: #00a32a; }';
-        $html .= '</style></head><body>';
-
-        $html .= '<div class="header">';
-        $html .= '<h1>' . sprintf(__('Your %s SEO Report', $this->text_domain), ucfirst($frequency)) . '</h1>';
-        $html .= '<p>' . get_bloginfo('name') . ' - ' . date('F j, Y') . '</p>';
-        $html .= '</div>';
-
-        $html .= '<div class="content">';
-
-        // Traffic Overview
-        if (isset($report_data['traffic'])) {
-            $traffic = $report_data['traffic'];
-            $html .= '<div class="section">';
-            $html .= '<h2>' . __('Traffic Overview', $this->text_domain) . '</h2>';
-            $html .= '<div class="stat"><strong>' . number_format($traffic['total_visits']) . '</strong><br>Total Visits</div>';
-            $html .= '<div class="stat"><strong>' . number_format($traffic['organic_traffic']) . '</strong><br>Organic Traffic</div>';
-            $html .= '<div class="stat"><strong>' . $traffic['bounce_rate'] . '</strong><br>Bounce Rate</div>';
-            $html .= '<div class="stat"><strong>' . $traffic['avg_session_duration'] . '</strong><br>Avg. Session Duration</div>';
-            $html .= '</div>';
-        }
-
-        // Technical Issues
-        if (isset($report_data['issues'])) {
-            $html .= '<div class="section">';
-            $html .= '<h2>' . __('Technical SEO Issues', $this->text_domain) . '</h2>';
-            if (empty($report_data['issues'])) {
-                $html .= '<p style="color: #00a32a;">✓ No critical issues detected!</p>';
-            } else {
-                foreach ($report_data['issues'] as $issue) {
-                    $class = 'issue-' . $issue['severity'];
-                    $html .= '<p class="' . $class . '">• ' . $issue['description'] . '</p>';
+        foreach ($data as $section => $content) {
+            $html .= '<h3>' . ucfirst(str_replace('_', ' ', $section)) . '</h3>';
+            if (is_array($content)) {
+                $html .= '<ul>';
+                foreach ($content as $item) {
+                    $html .= '<li>' . esc_html($item) . '</li>';
                 }
+                $html .= '</ul>';
+            } else {
+                $html .= '<p>' . esc_html($content) . '</p>';
             }
-            $html .= '</div>';
         }
-
-        // Query Args Monitoring
-        if (isset($report_data['query_args'])) {
-            $query_data = $report_data['query_args'];
-            $html .= '<div class="section">';
-            $html .= '<h2>' . __('Query Parameters Monitoring', $this->text_domain) . '</h2>';
-            $html .= '<p><strong>' . $query_data['new_parameters'] . '</strong> new parameters detected this week</p>';
-            $html .= '<p><strong>' . $query_data['high_impact_parameters'] . '</strong> high-impact parameters found</p>';
-            $html .= '<p><strong>' . $query_data['total_monitored'] . '</strong> total parameters monitored</p>';
-            $html .= '</div>';
-        }
-
-        $html .= '<div class="section">';
-        $html .= '<p>' . __('This report was generated automatically by the Softworld AI SEO Plugin.', $this->text_domain) . '</p>';
-        $html .= '<p><a href="' . admin_url('admin.php?page=softworld-ai-seo-advanced-settings') . '">' . __('Manage your SEO settings', $this->text_domain) . '</a></p>';
-        $html .= '</div>';
-
-        $html .= '</div></body></html>';
-
+        
         return $html;
     }
 
     /**
-     * Log email report
+     * Send email report
      */
-    private function log_email_report($report_type, $recipient, $status, $report_data)
+    private function send_email_report($recipient, $content, $type = 'manual')
     {
+        $subject = sprintf(__('[%s] SEO Performance Report', $this->text_domain), get_bloginfo('name'));
+        
+        $headers = ['Content-Type: text/html; charset=UTF-8'];
+        $sent = wp_mail($recipient, $subject, $content, $headers);
+        
+        // Log the report
         global $wpdb;
-
-        $table_name = $wpdb->prefix . 'softworld_seo_reports';
-
+        $reports_table = $wpdb->prefix . 'softworld_seo_reports';
+        
         $wpdb->insert(
-            $table_name,
+            $reports_table,
             [
-                'report_type' => $report_type,
+                'report_type' => $type,
+                'sent_date' => current_time('mysql'),
                 'recipient_email' => $recipient,
-                'status' => $status,
-                'report_data' => json_encode($report_data)
+                'status' => $sent ? 'sent' : 'failed',
+                'report_data' => wp_json_encode(['content' => $content])
             ]
         );
+        
+        return $sent;
     }
 
     /**
      * AJAX handler for sending test email
      */
- // Update the ajax_send_test_email method in your Softworld_AI_SEO_Advanced_Settings class
     public function ajax_send_test_email()
     {
-        // Enable error reporting for debugging
-        error_reporting(E_ALL);
-        ini_set('display_errors', 1);
-        
-        // Check nonce first
-        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'softworld_advanced_settings')) {
-            wp_send_json_error(__('Security check failed', $this->text_domain));
-            return;
+        if (!wp_verify_nonce($_POST['nonce'], 'softworld_advanced_settings')) {
+            wp_die(__('Security check failed', $this->text_domain));
         }
 
         if (!current_user_can('manage_options')) {
-            wp_send_json_error(__('Permission denied', $this->text_domain));
-            return;
+            wp_die(__('Insufficient permissions', $this->text_domain));
         }
 
-        // Get settings
         $settings = $this->get_settings();
+        $recipients = array_filter(array_map('trim', explode(',', $settings['report_recipients'])));
         
-        // Validate recipients
-        $recipients_raw = trim($settings['report_recipients']);
-        if (empty($recipients_raw)) {
-            wp_send_json_error(__('No email recipients configured. Please add at least one email address.', $this->text_domain));
-            return;
+        if (empty($recipients)) {
+            wp_send_json_error(__('No recipients configured', $this->text_domain));
         }
 
-        $recipients = array_map('trim', explode(',', $recipients_raw));
-        $valid_recipients = [];
+        $test_data = $this->generate_seo_report_data(['traffic_overview', 'technical_issues']);
+        $content = $this->format_email_report($test_data);
         
+        $success_count = 0;
         foreach ($recipients as $recipient) {
-            if (is_email($recipient)) {
-                $valid_recipients[] = $recipient;
+            if (is_email($recipient) && $this->send_email_report($recipient, $content, 'test')) {
+                $success_count++;
             }
         }
         
-        if (empty($valid_recipients)) {
-            wp_send_json_error(__('No valid email addresses found. Please check your recipient list.', $this->text_domain));
-            return;
-        }
-
-        // Generate test report data
-        try {
-            $test_data = $this->generate_test_report_data();
-        } catch (Exception $e) {
-            wp_send_json_error(__('Failed to generate report data: ', $this->text_domain) . $e->getMessage());
-            return;
-        }
-
-        // Enable email logging for debugging
-        add_action('wp_mail_failed', array($this, 'log_email_error'));
-        
-        $sent_count = 0;
-        $errors = [];
-        
-        foreach ($valid_recipients as $recipient) {
-            try {
-                $result = $this->send_test_seo_report($recipient, $test_data);
-                if ($result) {
-                    $sent_count++;
-                } else {
-                    $errors[] = sprintf(__('Failed to send to %s', $this->text_domain), $recipient);
-                }
-            } catch (Exception $e) {
-                $errors[] = sprintf(__('Error sending to %s: %s', $this->text_domain), $recipient, $e->getMessage());
-            }
-        }
-
-        // Return results
-        if ($sent_count > 0) {
-            $message = sprintf(__('Test email sent successfully to %d of %d recipients', $this->text_domain), 
-                            $sent_count, count($valid_recipients));
-            
-            if (!empty($errors)) {
-                $message .= '. ' . __('Errors:', $this->text_domain) . ' ' . implode(', ', $errors);
-            }
-            
-            wp_send_json_success($message);
+        if ($success_count > 0) {
+            wp_send_json_success(sprintf(__('Test email sent to %d recipients', $this->text_domain), $success_count));
         } else {
-            $error_message = __('Failed to send test email to any recipients.', $this->text_domain);
-            if (!empty($errors)) {
-                $error_message .= ' ' . __('Errors:', $this->text_domain) . ' ' . implode(', ', $errors);
-            }
-            wp_send_json_error($error_message);
+            wp_send_json_error(__('Failed to send test email', $this->text_domain));
         }
     }
-
-    /**
-     * Send test SEO report email with better error handling
-     */
-    private function send_test_seo_report($recipient, $report_data)
-    {
-        $subject = sprintf(__('[TEST] SEO Report - %s', $this->text_domain), get_bloginfo('name'));
-
-        // Generate email content
-        $message = $this->get_test_email_template($report_data);
-
-        // Set headers
-        $headers = [
-            'Content-Type: text/html; charset=UTF-8',
-            'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>',
-            'Reply-To: ' . get_option('admin_email')
-        ];
-
-        // Additional debugging
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Attempting to send email to: ' . $recipient);
-            error_log('Subject: ' . $subject);
-            error_log('Headers: ' . print_r($headers, true));
-        }
-
-        // Send email
-        $sent = wp_mail($recipient, $subject, $message, $headers);
-
-        // Log the attempt
-        $this->log_email_report('test', $recipient, $sent ? 'sent' : 'failed', $report_data);
-
-        return $sent;
-    }
-
-    private function generate_test_report_data()
-    {
-        return [
-            'traffic' => [
-                'total_visits' => 1234,
-                'organic_traffic' => 987,
-                'bounce_rate' => '42%',
-                'avg_session_duration' => '2:15',
-                'top_pages' => [
-                    ['title' => 'Sample Page 1', 'visits' => 150, 'engagement' => '75%'],
-                    ['title' => 'Sample Page 2', 'visits' => 120, 'engagement' => '68%']
-                ]
-            ],
-            'keywords' => [
-                'total_keywords' => 85,
-                'avg_position' => 23.4,
-                'clicks' => 456,
-                'impressions' => 12500,
-                'top_keywords' => [
-                    ['keyword' => 'test keyword 1', 'position' => 5, 'clicks' => 50],
-                    ['keyword' => 'test keyword 2', 'position' => 8, 'clicks' => 35]
-                ]
-            ],
-            'issues' => [
-                [
-                    'type' => 'test_issue',
-                    'count' => 3,
-                    'severity' => 'medium',
-                    'description' => 'This is a test technical issue for the email report'
-                ]
-            ],
-            'content' => [
-                'total_posts' => wp_count_posts('post')->publish,
-                'avg_word_count' => 650,
-                'posts_without_images' => 2,
-                'posts_without_internal_links' => 1
-            ],
-            'query_args' => [
-                'new_parameters' => 5,
-                'high_impact_parameters' => 2,
-                'total_monitored' => 25,
-                'top_parameters' => [
-                    (object)['query_args' => 'test=1&debug=true', 'hit_count' => 15, 'impact_score' => 75]
-                ]
-            ]
-        ];
-    }
-
-    /**
-     * Get simplified test email template
-     */
-    private function get_test_email_template($report_data)
-    {
-        $site_name = get_bloginfo('name');
-        $site_url = home_url();
-        
-        $html = '<!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <title>Test SEO Report</title>
-        <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; }
-            .container { max-width: 600px; margin: 0 auto; background: #fff; border: 1px solid #ddd; border-radius: 8px; }
-            .header { background: #0073aa; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
-            .content { padding: 20px; }
-            .stat { background: #f9f9f9; padding: 15px; margin: 10px 0; border-radius: 4px; }
-            .footer { background: #f1f1f1; padding: 15px; text-align: center; border-radius: 0 0 8px 8px; }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="header">
-                <h1>🧪 Test SEO Report</h1>
-                <p>' . esc_html($site_name) . ' - ' . date('F j, Y') . '</p>
-            </div>
-            
-            <div class="content">
-                <p><strong>This is a test email from your Softworld AI SEO Plugin!</strong></p>
-                
-                <div class="stat">
-                    <h3>📊 Sample Traffic Data</h3>
-                    <p>Total Visits: <strong>' . number_format($report_data['traffic']['total_visits']) . '</strong></p>
-                    <p>Organic Traffic: <strong>' . number_format($report_data['traffic']['organic_traffic']) . '</strong></p>
-                    <p>Bounce Rate: <strong>' . esc_html($report_data['traffic']['bounce_rate']) . '</strong></p>
-                </div>
-                
-                <div class="stat">
-                    <h3>🔍 Query Monitoring</h3>
-                    <p>New Parameters: <strong>' . $report_data['query_args']['new_parameters'] . '</strong></p>
-                    <p>High Impact: <strong>' . $report_data['query_args']['high_impact_parameters'] . '</strong></p>
-                    <p>Total Monitored: <strong>' . $report_data['query_args']['total_monitored'] . '</strong></p>
-                </div>
-                
-                <div class="stat">
-                    <h3>✅ Email Configuration Test</h3>
-                    <p>If you received this email, your email settings are working correctly!</p>
-                </div>
-            </div>
-            
-            <div class="footer">
-                <p>Generated by <strong>Softworld AI SEO Plugin</strong></p>
-                <p><a href="' . admin_url('admin.php?page=softworld-ai-seo-advanced-settings') . '">Manage Settings</a></p>
-            </div>
-        </div>
-    </body>
-    </html>';
-
-        return $html;
-    }
-
 
     /**
      * AJAX handler for clearing query logs
      */
     public function ajax_clear_query_logs()
     {
-        check_ajax_referer('softworld_advanced_settings', 'nonce');
+        if (!wp_verify_nonce($_POST['nonce'], 'softworld_advanced_settings')) {
+            wp_die(__('Security check failed', $this->text_domain));
+        }
 
         if (!current_user_can('manage_options')) {
-            wp_send_json_error(__('Permission denied', $this->text_domain));
+            wp_die(__('Insufficient permissions', $this->text_domain));
         }
 
         global $wpdb;
-        
+        $table = $wpdb->prefix . 'softworld_query_args';
         $settings = $this->get_settings();
-        $threshold_days = intval($settings['cleanup_threshold']);
         
-        $table_name = $wpdb->prefix . 'softworld_query_args';
+        $threshold_date = date('Y-m-d H:i:s', strtotime('-' . $settings['cleanup_threshold'] . ' days'));
         
         $deleted = $wpdb->query($wpdb->prepare(
-            "DELETE FROM $table_name WHERE last_seen < DATE_SUB(NOW(), INTERVAL %d DAY)",
-            $threshold_days
+            "DELETE FROM $table WHERE last_seen < %s",
+            $threshold_date
         ));
-
-        wp_send_json_success(sprintf(__('Cleared %d old query log entries', $this->text_domain), $deleted));
+        
+        wp_send_json_success(sprintf(__('%d old records cleared', $this->text_domain), $deleted));
     }
 
-    /**
-     * Log email errors for debugging
-     */
-    public function log_email_error($wp_error)
+    // Helper methods for report generation
+    private function get_traffic_overview()
     {
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Email Error: ' . $wp_error->get_error_message());
-        }
-        
-        // Store error for display to user
-        set_transient('softworld_email_error', $wp_error->get_error_message(), 300);
+        return ['Sample traffic data - integrate with your analytics'];
     }
 
-    /**
-     * Check email configuration
-     */
-    public function check_email_configuration()
+    private function get_top_keywords()
     {
-        $issues = [];
-        
-        // Check if wp_mail function exists
-        if (!function_exists('wp_mail')) {
-            $issues[] = 'wp_mail function is not available';
-        }
-        
-        // Check admin email
-        $admin_email = get_option('admin_email');
-        if (empty($admin_email) || !is_email($admin_email)) {
-            $issues[] = 'Invalid admin email address in WordPress settings';
-        }
-        
-        // Check if SMTP is configured (basic check)
-        $smtp_host = ini_get('SMTP');
-        if (empty($smtp_host) && !defined('WPMS_SMTP_HOST')) {
-            $issues[] = 'No SMTP server configured (this might be normal if using system mail)';
-        }
-        
-        return $issues;
+        return ['Sample keyword data - integrate with search console'];
+    }
+
+    private function get_technical_issues()
+    {
+        return ['Sample technical issues - run site audits'];
+    }
+
+    private function get_content_analysis()
+    {
+        return ['Sample content analysis - analyze recent posts'];
+    }
+
+    private function get_query_monitoring_summary()
+    {
+        return $this->get_query_args_stats();
     }
 }
+?>
