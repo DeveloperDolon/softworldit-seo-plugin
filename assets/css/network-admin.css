@@ -1,0 +1,597 @@
+/* Network Admin Styles for Softworld AI SEO */
+
+.softworld-network-wrap {
+    max-width: 1200px;
+}
+
+/* Network Cards */
+.softworld-network-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.softworld-network-card {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, .04);
+}
+
+.softworld-network-card h3 {
+    margin: 0 0 15px 0;
+    color: #23282d;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.softworld-network-card ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.softworld-network-card li {
+    padding: 5px 0;
+    border-bottom: 1px solid #f1f1f1;
+    font-size: 14px;
+}
+
+.softworld-network-card li:last-child {
+    border-bottom: none;
+}
+
+/* License Status */
+.license-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+}
+
+.license-status.valid {
+    color: #46b450;
+}
+
+.license-status.invalid {
+    color: #dc3232;
+}
+
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.license-status.valid .status-indicator {
+    background: #46b450;
+    box-shadow: 0 0 0 3px rgba(70, 180, 80, 0.2);
+}
+
+.license-status.invalid .status-indicator {
+    background: #dc3232;
+    box-shadow: 0 0 0 3px rgba(220, 50, 50, 0.2);
+}
+
+.license-status small {
+    display: block;
+    font-weight: normal;
+    color: #666;
+    margin-top: 5px;
+}
+
+/* Quick Actions */
+.quick-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.quick-actions .button {
+    flex: 1;
+    min-width: auto;
+    text-align: center;
+    justify-content: center;
+}
+
+/* Sites Overview */
+.softworld-sites-overview {
+    margin: 30px 0;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.softworld-sites-overview h2 {
+    margin: 0;
+    padding: 20px;
+    background: #f9f9f9;
+    border-bottom: 1px solid #ccd0d4;
+    font-size: 18px;
+}
+
+.sites-table-container {
+    overflow-x: auto;
+}
+
+.sites-table-container table {
+    margin: 0;
+}
+
+.sites-table-container th,
+.sites-table-container td {
+    padding: 15px 10px;
+    vertical-align: middle;
+}
+
+/* Site Status Indicators */
+.site-status.active {
+    color: #46b450;
+    font-weight: 600;
+}
+
+.site-status.inactive {
+    color: #dc3232;
+    font-weight: 600;
+}
+
+.settings-override {
+    color: #f56e28;
+    font-weight: 600;
+    position: relative;
+}
+
+.settings-inherited {
+    color: #46b450;
+    font-weight: 600;
+}
+
+/* License Form */
+.softworld-license-form {
+    background: #fff;
+    padding: 20px;
+    border: 1px solid #ccd0d4;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+.license-status-display {
+    background: #f0f6fc;
+    border: 1px solid #0073aa;
+    border-radius: 4px;
+    padding: 15px;
+}
+
+.license-valid {
+    color: #46b450;
+    font-weight: 600;
+    font-size: 16px;
+}
+
+/* Settings Sections */
+.softworld-settings-section {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 8px;
+    margin: 20px 0;
+    overflow: hidden;
+}
+
+.softworld-settings-section h2 {
+    margin: 0;
+    padding: 20px;
+    background: #f9f9f9;
+    border-bottom: 1px solid #ccd0d4;
+    font-size: 18px;
+}
+
+.softworld-settings-section .form-table {
+    margin: 0;
+}
+
+.softworld-settings-section .form-table th,
+.softworld-settings-section .form-table td {
+    padding: 20px;
+}
+
+.settings-group {
+    border-bottom: 1px solid #f1f1f1;
+    padding: 20px;
+}
+
+.settings-group:last-child {
+    border-bottom: none;
+}
+
+.settings-group h3 {
+    margin: 0 0 15px 0;
+    color: #555;
+    font-size: 16px;
+}
+
+/* Import/Export Styles */
+.softworld-import-export-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin: 20px 0;
+}
+
+.softworld-export-section,
+.softworld-import-section {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.softworld-export-section h2,
+.softworld-import-section h2 {
+    margin: 0 0 15px 0;
+    color: #23282d;
+    border-bottom: 2px solid #0073aa;
+    padding-bottom: 10px;
+}
+
+.softworld-import-export-log {
+    margin: 30px 0;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.softworld-import-export-log h2 {
+    margin: 0;
+    padding: 20px;
+    background: #f9f9f9;
+    border-bottom: 1px solid #ccd0d4;
+}
+
+/* Loading States */
+.softworld-loading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+.softworld-loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #0073aa;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: softworld-spin 1s linear infinite;
+}
+
+@keyframes softworld-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Notifications */
+.softworld-notification {
+    display: none;
+    padding: 10px 15px;
+    border-radius: 4px;
+    margin: 15px 0;
+    border: 1px solid;
+}
+
+.softworld-notification.success {
+    background: #d4edda;
+    border-color: #c3e6cb;
+    color: #155724;
+}
+
+.softworld-notification.error {
+    background: #f8d7da;
+    border-color: #f5c6cb;
+    color: #721c24;
+}
+
+.softworld-notification.info {
+    background: #cce7ff;
+    border-color: #b8daff;
+    color: #004085;
+}
+
+/* Responsive Design */
+@media (max-width: 782px) {
+    .softworld-network-cards {
+        grid-template-columns: 1fr;
+    }
+    
+    .softworld-import-export-container {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .quick-actions {
+        flex-direction: column;
+    }
+    
+    .sites-table-container {
+        font-size: 14px;
+    }
+    
+    .sites-table-container th,
+    .sites-table-container td {
+        padding: 10px 8px;
+    }
+}
+
+/* Form Enhancements */
+.softworld-form-row {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    margin: 15px 0;
+}
+
+.softworld-form-row label {
+    min-width: 150px;
+    font-weight: 600;
+}
+
+.softworld-form-row input,
+.softworld-form-row select,
+.softworld-form-row textarea {
+    flex: 1;
+}
+
+/* Network Status Badges */
+.network-status-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.network-status-badge.active {
+    background: #d4edda;
+    color: #155724;
+}
+
+.network-status-badge.inactive {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.network-status-badge.pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+/* License Info Panel */
+.license-info-panel {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+.license-info-panel h3 {
+    color: white;
+    margin: 0 0 15px 0;
+}
+
+.license-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.license-info-item {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 15px;
+    border-radius: 6px;
+    backdrop-filter: blur(10px);
+}
+
+.license-info-item strong {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+.license-info-item span {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+/* Advanced Table Styles */
+.softworld-advanced-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.softworld-advanced-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    text-align: left;
+    padding: 15px;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.softworld-advanced-table td {
+    padding: 15px;
+    border-bottom: 1px solid #dee2e6;
+    vertical-align: middle;
+}
+
+.softworld-advanced-table tr:hover {
+    background: #f8f9fa;
+}
+
+.softworld-advanced-table .actions {
+    white-space: nowrap;
+}
+
+.softworld-advanced-table .actions .button {
+    margin-right: 5px;
+    padding: 5px 10px;
+    font-size: 12px;
+}
+
+/* Stats Cards */
+.softworld-stats-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.softworld-stat-card {
+    background: #fff;
+    border: 1px solid #e1e5e9;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.softworld-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.softworld-stat-number {
+    display: block;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #0073aa;
+    margin-bottom: 10px;
+}
+
+.softworld-stat-label {
+    color: #666;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0;
+}
+
+/* Progress Indicators */
+.softworld-progress {
+    width: 100%;
+    height: 8px;
+    background: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 10px 0;
+}
+
+.softworld-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #0073aa, #005177);
+    transition: width 0.3s ease;
+}
+
+/* Toggle Switches */
+.softworld-toggle {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 24px;
+}
+
+.softworld-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.softworld-toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 24px;
+}
+
+.softworld-toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+.softworld-toggle input:checked + .softworld-toggle-slider {
+    background-color: #0073aa;
+}
+
+.softworld-toggle input:checked + .softworld-toggle-slider:before {
+    transform: translateX(26px);
+}
+
+/* Action Buttons */
+.softworld-action-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 20px 0;
+}
+
+.softworld-action-buttons .button {
+    flex: 1;
+    min-width: 120px;
+    text-align: center;
+    justify-content: center;
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .softworld-network-card,
+    .softworld-settings-section,
+    .softworld-export-section,
+    .softworld-import-section {
+        background: #1e1e1e;
+        border-color: #444;
+        color: #e0e0e0;
+    }
+    
+    .softworld-network-card h3,
+    .softworld-settings-section h2 {
+        color: #e0e0e0;
+    }
+    
+    .softworld-advanced-table th {
+        background: #2a2a2a;
+        color: #e0e0e0;
+    }
+    
+    .softworld-advanced-table tr:hover {
+        background: #2a2a2a;
+    }
+}

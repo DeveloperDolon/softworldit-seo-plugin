@@ -6,6 +6,7 @@
  * Version: 1.0.0
  * Author: SOFTWORLDIT LLC
  * Author URI: https://softworldit.com/
+ * Network: true
  * License: MIT
  * License URI: https://opensource.org/licenses/MIT
  * Text Domain: softworld-ai-seo
@@ -24,7 +25,7 @@ define('AI_SEO_VERSION', '1.0.0');
 require_once plugin_dir_path(__FILE__) . 'includes/sitemap.php';
 require_once plugin_dir_path(__FILE__) . 'includes/role-manager.php';
 require_once plugin_dir_path(__FILE__) . 'includes/seo-tools.php';
-require_once plugin_dir_path(__FILE__) . 'includes/robots-txt-editor.php'; // Add this line
+require_once plugin_dir_path(__FILE__) . 'includes/robots-txt-editor.php';
 require_once plugin_dir_path(__FILE__) . 'includes/redirect-manager.php';
 require_once plugin_dir_path(__FILE__) . 'includes/not-found-logger.php';
 require_once plugin_dir_path(__FILE__) . 'includes/crawl-optimizer.php';
@@ -35,6 +36,7 @@ require_once plugin_dir_path(__FILE__) . 'includes/schema-manager.php';
 require_once plugin_dir_path(__FILE__) . 'includes/link-assistant.php';
 require_once plugin_dir_path(__FILE__) . 'includes/advanced-settings.php';
 require_once plugin_dir_path(__FILE__) . 'includes/corn-schedule-helper.php';
+require_once plugin_dir_path(__FILE__) . 'includes/multisite-network-manager.php';
 
 // Another services Includes
 require_once plugin_dir_path(__FILE__) . 'includes/another_services/meta-boxes.php';
@@ -68,19 +70,48 @@ class Softworld_AI_SEO_Plugin
     private $schema_manager;
     private $link_assistant;
     private $advanced_settings;
+    private $multisite_manager;
 
     public function __construct()
     {
+        // Initialize multisite manager FIRST if multisite
+        if (is_multisite()) {
+            $this->multisite_manager = new Softworld_AI_SEO_Multisite_Network_Manager('softworld-ai-seo');
+        }
+
         add_action('init', array($this, 'init'));
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
         add_action('admin_enqueue_scripts', array($this, 'admin_enqueue_scripts'));
-        // Add Admin Pages
-        add_action('admin_menu', array($this, 'register_admin_menu'));
+
+        // Add Admin Pages - Use priority to ensure multisite manager is ready
+        add_action('admin_menu', array($this, 'register_admin_menu'), 10);
+
+        // FIXED: Only register network admin menu if we're in multisite AND have the manager
+        add_action('network_admin_menu', array($this, 'register_network_admin_menu'), 10);
 
         // plugin activation/deactivation hooks
         register_activation_hook(__FILE__, array($this, 'activate'));
         register_deactivation_hook(__FILE__, array($this, 'deactivate'));
 
+        // Initialize other components
+        $this->init_components();
+
+        // AJAX handlers
+        $this->init_ajax_handlers();
+
+        // Initialize DXSEO Admin Menu
+        add_action('plugins_loaded', function () {
+            if (class_exists('DXSEO_Admin_Menu')) {
+                DXSEO_Admin_Menu::init();
+            }
+        });
+    }
+
+    /**
+     * Initialize components
+     */
+    private function init_components()
+    {
         // Initialize Role Manager
         $this->role_manager = new Softworld_AI_SEO_Role_Manager('softworld-ai-seo');
         // Initialize SEO Tools
@@ -102,20 +133,18 @@ class Softworld_AI_SEO_Plugin
         $this->schema_manager = new Softworld_AI_SEO_Schema_Manager('softworld-ai-seo');
         $this->link_assistant = new Softworld_AI_SEO_Link_Assistant('softworld-ai-seo');
         $this->advanced_settings = new Softworld_AI_SEO_Advanced_Settings('softworld-ai-seo');
+    }
 
+    /**
+     * Initialize AJAX handlers
+     */
+    private function init_ajax_handlers()
+    {
         add_action('wp_ajax_softworld_search_posts', [$this, 'ajax_search_posts']);
         add_action('wp_ajax_softworld_search_pages', [$this, 'ajax_search_pages']);
         add_action('wp_ajax_softworld_manual_ping', [$this, 'ajax_manual_ping']);
         add_shortcode('softworld_seo_title', array($this, 'seo_title_shortcode'));
         add_shortcode('softworld_seo_description', array($this, 'seo_description_shortcode'));
-
-        // REMOVE THIS LINE - it's causing the issue
-        // add_action('plugins_loaded', function() {
-        //     DXSEO_Admin_Menu::init();
-        // });
-
-        // Initialize DXSEO Admin Menu directly
-        DXSEO_Admin_Menu::init();
     }
 
     public function init()
@@ -132,6 +161,14 @@ class Softworld_AI_SEO_Plugin
         add_action('wp_ajax_softworld_update_query_status', [$this, 'ajax_update_query_status']);
         add_action('wp_ajax_softworld_get_report_data', [$this, 'ajax_get_report_data']);
         add_action('wp_ajax_softworld_export_query_data', [$this, 'ajax_export_query_data']);
+
+        // FIXED: Only add multisite AJAX handlers if we have multi-site manager
+        if (is_multisite() && $this->multisite_manager) {
+            add_action('wp_ajax_softworld_site_request_override', [$this, 'ajax_site_request_override']);
+            add_action('wp_ajax_softworld_site_revoke_override', [$this, 'ajax_site_revoke_override']);
+            add_action('wp_ajax_softworld_network_get_stats', [$this, 'ajax_network_get_stats']);
+            add_action('wp_ajax_softworld_network_get_import_export_log', [$this, 'ajax_network_get_import_export_log']);
+        }
     }
 
     public function ajax_get_advanced_stats()
@@ -143,9 +180,9 @@ class Softworld_AI_SEO_Plugin
         }
 
         global $wpdb;
-        
+
         $table_name = $wpdb->prefix . 'softworld_query_args';
-        
+
         $stats = [
             'total_unique_urls' => 0,
             'total_query_args' => 0,
@@ -176,7 +213,7 @@ class Softworld_AI_SEO_Plugin
 
         $id = intval($_POST['id']);
         $status = sanitize_text_field($_POST['status']);
-        
+
         $allowed_statuses = ['new', 'reviewed', 'whitelisted', 'blacklisted'];
         if (!in_array($status, $allowed_statuses)) {
             wp_send_json_error(__('Invalid status', 'softworld-ai-seo'));
@@ -184,7 +221,7 @@ class Softworld_AI_SEO_Plugin
 
         global $wpdb;
         $table_name = $wpdb->prefix . 'softworld_query_args';
-        
+
         $result = $wpdb->update(
             $table_name,
             ['status' => $status],
@@ -200,6 +237,154 @@ class Softworld_AI_SEO_Plugin
         }
     }
 
+    public function ajax_site_request_override()
+    {
+        check_ajax_referer('softworld_network_nonce', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Permission denied', 'softworld-ai-seo'));
+        }
+
+        $reason = sanitize_textarea_field($_POST['override_reason'] ?? '');
+
+        // Store override request
+        update_option('softworld_ai_seo_override_requested', true);
+        update_option('softworld_ai_seo_override_reason', $reason);
+        update_option('softworld_ai_seo_override_request_date', current_time('mysql'));
+        update_option('softworld_ai_seo_override_requester', get_current_user_id());
+
+        // Get network settings to check auto-approval
+        $network_settings = get_site_option('softworld_ai_seo_network_settings', []);
+
+        if (!empty($network_settings['auto_approve_overrides'])) {
+            // Auto-approve the request
+            update_option('softworld_ai_seo_override_approved', true);
+            update_option('softworld_ai_seo_override_approved_date', current_time('mysql'));
+
+            wp_send_json_success(__('Override request approved automatically!', 'softworld-ai-seo'));
+        } else {
+            // Send notification to network admin
+            $this->notify_network_admin_override_request($reason);
+
+            wp_send_json_success(__('Override request submitted for review.', 'softworld-ai-seo'));
+        }
+    }
+
+    /**
+     * AJAX: Site Revoke Override
+     */
+    public function ajax_site_revoke_override()
+    {
+        check_ajax_referer('softworld_network_nonce', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Permission denied', 'softworld-ai-seo'));
+        }
+
+        // Remove all override-related options
+        delete_option('softworld_ai_seo_override_approved');
+        delete_option('softworld_ai_seo_override_requested');
+        delete_option('softworld_ai_seo_override_reason');
+        delete_option('softworld_ai_seo_override_request_date');
+        delete_option('softworld_ai_seo_override_approved_date');
+        delete_option('softworld_ai_seo_override_requester');
+
+        // Reset to network settings
+        $network_settings = get_site_option('softworld_ai_seo_network_settings', []);
+        foreach ($network_settings as $key => $value) {
+            if (strpos($key, 'default_') === 0) {
+                $site_key = str_replace('default_', 'softworld_ai_seo_', $key);
+                update_option($site_key, $value);
+            }
+        }
+
+        wp_send_json_success(__('Override revoked. Site now uses network settings.', 'softworld-ai-seo'));
+    }
+
+    /**
+     * AJAX: Get Network Stats
+     */
+    public function ajax_network_get_stats()
+    {
+        check_ajax_referer('softworld_network_nonce', 'nonce');
+
+        if (!current_user_can('manage_network')) {
+            wp_send_json_error(__('Permission denied', 'softworld-ai-seo'));
+        }
+
+        $stats = [
+            'license_status' => $this->multisite_manager ?
+                $this->multisite_manager->get_network_license_info() : null,
+            'network_stats' => $this->multisite_manager ?
+                $this->multisite_manager->get_network_statistics() : null
+        ];
+
+        wp_send_json_success($stats);
+    }
+
+    /**
+     * AJAX: Get Import/Export Log
+     */
+    public function ajax_network_get_import_export_log()
+    {
+        check_ajax_referer('softworld_network_nonce', 'nonce');
+
+        if (!current_user_can('manage_network')) {
+            wp_send_json_error(__('Permission denied', 'softworld-ai-seo'));
+        }
+
+        ob_start();
+        if ($this->multisite_manager) {
+            $this->multisite_manager->render_import_export_log();
+        }
+        $html = ob_get_clean();
+
+        wp_send_json_success($html);
+    }
+
+    /**
+     * Notify Network Admin of Override Request
+     */
+    private function notify_network_admin_override_request($reason)
+    {
+        $site_name = get_bloginfo('name');
+        $site_url = get_home_url();
+        $user = wp_get_current_user();
+
+        $subject = sprintf(
+            __('[%s] SEO Settings Override Request', 'softworld-ai-seo'),
+            get_network()->site_name
+        );
+
+        $message = sprintf(
+            __('A site administrator has requested permission to override network SEO settings.
+
+                Site: %s (%s)
+                Requested by: %s (%s)
+                Date: %s
+
+                Reason:
+                %s
+
+                To review this request, visit: %s
+
+                ---
+                This is an automated message from Softworld AI SEO Plugin.', 'softworld-ai-seo'),
+            $site_name,
+            $site_url,
+            $user->display_name,
+            $user->user_email,
+            current_time('F j, Y g:i A'),
+            $reason ?: __('No reason provided', 'softworld-ai-seo'),
+            network_admin_url('admin.php?page=softworld-ai-seo-network')
+        );
+
+        // Get network admin email
+        $network_admin_email = get_site_option('admin_email');
+
+        wp_mail($network_admin_email, $subject, $message);
+    }
+
     public function ajax_get_report_data()
     {
         check_ajax_referer('softworld_advanced_settings', 'nonce');
@@ -209,10 +394,10 @@ class Softworld_AI_SEO_Plugin
         }
 
         $report_id = intval($_POST['id']);
-        
+
         global $wpdb;
         $table_name = $wpdb->prefix . 'softworld_seo_reports';
-        
+
         $report = $wpdb->get_row($wpdb->prepare(
             "SELECT * FROM $table_name WHERE id = %d",
             $report_id
@@ -223,20 +408,20 @@ class Softworld_AI_SEO_Plugin
         }
 
         $report_data = json_decode($report->report_data, true);
-        
+
         $html = '<div class="report-data-viewer">';
         $html .= '<h4>' . sprintf(__('Report Type: %s', 'softworld-ai-seo'), ucwords(str_replace('_', ' ', $report->report_type))) . '</h4>';
         $html .= '<p><strong>' . __('Sent to:', 'softworld-ai-seo') . '</strong> ' . esc_html($report->recipient_email) . '</p>';
         $html .= '<p><strong>' . __('Sent on:', 'softworld-ai-seo') . '</strong> ' . date('F j, Y \a\t g:i A', strtotime($report->sent_date)) . '</p>';
         $html .= '<p><strong>' . __('Status:', 'softworld-ai-seo') . '</strong> ' . ucfirst($report->status) . '</p>';
-        
+
         if ($report_data) {
             $html .= '<h4>' . __('Report Contents:', 'softworld-ai-seo') . '</h4>';
             $html .= '<pre style="background: #f1f3f4; padding: 15px; border-radius: 4px; max-height: 300px; overflow-y: auto;">';
             $html .= esc_html(json_encode($report_data, JSON_PRETTY_PRINT));
             $html .= '</pre>';
         }
-        
+
         $html .= '</div>';
 
         wp_send_json_success($html);
@@ -252,7 +437,7 @@ class Softworld_AI_SEO_Plugin
 
         global $wpdb;
         $table_name = $wpdb->prefix . 'softworld_query_args';
-        
+
         $results = $wpdb->get_results(
             "SELECT url, query_args, hit_count, impact_score, status, first_seen, last_seen 
              FROM $table_name 
@@ -271,7 +456,7 @@ class Softworld_AI_SEO_Plugin
         header('Expires: 0');
 
         $output = fopen('php://output', 'w');
-        
+
         // Add CSV headers
         fputcsv($output, [
             'URL',
@@ -550,6 +735,13 @@ class Softworld_AI_SEO_Plugin
             [],
             '1.0.0'
         );
+
+        wp_enqueue_style(
+            'softworld-network-admin',
+            plugin_dir_url(__FILE__) . 'assets/css/network-admin.css',
+            [],
+            '1.0.0'
+        );
     }
 
     public function admin_enqueue_scripts()
@@ -564,7 +756,6 @@ class Softworld_AI_SEO_Plugin
             true
         );
 
-
         wp_enqueue_script(
             'softworldit-ayc-admin-js',
             plugin_dir_url(__FILE__) . 'assets/js/another_services.js',
@@ -573,7 +764,7 @@ class Softworld_AI_SEO_Plugin
             true
         );
 
-        // ✅ এখানে AJAX + Nonce + Host data পাঠানো হলো (v1.5 থেকে আনা হয়েছে)
+        // ✅ এখানে AJAX + Nonce + Host data পাঠানো হলো (v1.5 থেকে আনা হয়েছে)
         $host = parse_url(home_url(), PHP_URL_HOST);
         wp_localize_script('softworldit-ayc-admin-js', 'AYC_SEO', [
             'ajax' => admin_url('admin-ajax.php'),
@@ -636,17 +827,92 @@ class Softworld_AI_SEO_Plugin
                 'unsaved_changes' => __('You have unsaved changes. Are you sure you want to leave?', 'softworld-ai-seo')
             ]
         ]);
+
+        // Enqueue network admin scripts - FIXED: Only for multisite
+        if (is_multisite()) {
+            wp_enqueue_script(
+                'softworld-network-admin',
+                plugin_dir_url(__FILE__) . 'assets/js/network-admin.js',
+                ['jquery'],
+                '1.0.0',
+                true
+            );
+
+            wp_localize_script('softworld-network-admin', 'softworldNetwork', [
+                'nonce' => wp_create_nonce('softworld_network_nonce'),
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'i18n' => [
+                    'saving' => __('Saving...', 'softworld-ai-seo'),
+                    'saved' => __('Saved!', 'softworld-ai-seo'),
+                    'error' => __('Error occurred', 'softworld-ai-seo'),
+                    'confirm_apply_all' => __('Are you sure you want to apply these settings to all sites?', 'softworld-ai-seo'),
+                    'confirm_override_request' => __('Request permission to override network settings?', 'softworld-ai-seo'),
+                    'unsaved_changes' => __('You have unsaved changes. Are you sure you want to leave?', 'softworld-ai-seo')
+                ]
+            ]);
+
+            // Enqueue site override assets for individual sites (non-network admin)
+            if (!is_network_admin()) {
+                wp_enqueue_script(
+                    'softworld-site-override',
+                    plugin_dir_url(__FILE__) . 'assets/js/site-override.js',
+                    ['jquery'],
+                    '1.0.0',
+                    true
+                );
+
+                wp_localize_script('softworld-site-override', 'softworldSiteOverride', [
+                    'nonce' => wp_create_nonce('softworld_network_nonce'),
+                    'ajax_url' => admin_url('admin-ajax.php'),
+                    'i18n' => [
+                        'confirm_override_request' => __('Request permission to override network settings?', 'softworld-ai-seo'),
+                        'confirm_revoke_override' => __('Revert to network settings? This will remove all custom settings.', 'softworld-ai-seo')
+                    ]
+                ]);
+            }
+        }
     }
 
     public function activate()
     {
         // Register sitemap rewrite rules on activation
-        SoftworldIT_SEO_Sitemap::add_rewrite();
+        if (class_exists('SoftworldIT_SEO_Sitemap')) {
+            SoftworldIT_SEO_Sitemap::add_rewrite();
+        }
+
         // Add custom table for redirects
-        Softworld_AI_SEO_Redirect_Manager::create_redirects_table();
+        if ($this->redirect_manager) {
+            Softworld_AI_SEO_Redirect_Manager::create_redirects_table();
+        }
+
         // Add custom table for 404 logs
-        Softworld_AI_SEO_Not_Found_Logger::create_log_table();
-        $this->advanced_settings->create_tables();
+        if ($this->not_found_logger) {
+            Softworld_AI_SEO_Not_Found_Logger::create_log_table();
+        }
+
+        // Create advanced settings tables
+        if ($this->advanced_settings) {
+            $this->advanced_settings->create_tables();
+        }
+
+        // Create network tables if multisite
+        if (is_multisite() && $this->multisite_manager) {
+            $this->create_network_tables();
+
+            // Initialize network settings if they don't exist
+            if (!get_site_option('softworld_ai_seo_network_settings')) {
+                $default_network_settings = [
+                    'allow_site_overrides' => 0,
+                    'auto_approve_overrides' => 0,
+                    'default_seo_title' => get_bloginfo('name') . ' - %%title%%',
+                    'default_seo_description' => get_bloginfo('description'),
+                    'ping_search_engines' => 1,
+                    'include_posts' => 1,
+                    'include_pages' => 1
+                ];
+                update_site_option('softworld_ai_seo_network_settings', $default_network_settings);
+            }
+        }
 
         global $wp_rewrite;
         delete_option('rewrite_rules');
@@ -663,27 +929,119 @@ class Softworld_AI_SEO_Plugin
     }
 
     /**
-     * Register Sitemap Admin Page
+     * Create Network Tables
+     */
+    private function create_network_tables()
+    {
+        global $wpdb;
+
+        // Create network override requests table
+        $table_name = $wpdb->base_prefix . 'softworld_seo_network_overrides';
+
+        $charset_collate = $wpdb->get_charset_collate();
+
+        $sql = "CREATE TABLE $table_name (
+            id bigint(20) NOT NULL AUTO_INCREMENT,
+            blog_id bigint(20) NOT NULL,
+            user_id bigint(20) NOT NULL,
+            reason text,
+            status varchar(20) DEFAULT 'pending',
+            requested_date datetime DEFAULT CURRENT_TIMESTAMP,
+            approved_date datetime DEFAULT NULL,
+            approved_by bigint(20) DEFAULT NULL,
+            PRIMARY KEY (id),
+            KEY blog_id (blog_id),
+            KEY status (status)
+        ) $charset_collate;";
+
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        dbDelta($sql);
+    }
+
+    /**
+     * Helper method to check if current site can override network settings
+     */
+    public function can_override_network_settings()
+    {
+        if (!is_multisite()) {
+            return true;
+        }
+
+        return (bool) get_option('softworld_ai_seo_override_approved', false);
+    }
+
+    /**
+     * Helper method to get effective setting value (network or site)
+     */
+    public function get_effective_setting($option_name, $default = false)
+    {
+        if (!is_multisite()) {
+            return get_option($option_name, $default);
+        }
+
+        if ($this->can_override_network_settings()) {
+            return get_option($option_name, $default);
+        }
+
+        // Try to get from network settings
+        $network_settings = get_site_option('softworld_ai_seo_network_settings', []);
+        $network_key = str_replace('softworld_ai_seo_', 'default_', $option_name);
+
+        if (isset($network_settings[$network_key])) {
+            return $network_settings[$network_key];
+        }
+
+        return $default;
+    }
+
+    /**
+     * Register Admin Menu
      */
     public function register_admin_menu()
     {
-        // add_menu_page(
-        // 'SoftworldIT SEO Dashboard', 
-        // 'SoftworldIT SEO', 
-        // 'manage_options', 
-        // 'softworldit-ai-seo', 
-        // 'softworldit_render_dashboard', 
-        // 'dashicons-chart-area', 
-        // 80);
+        // FIXED: Check if site has access to settings in multisite environment
+        if (is_multisite() && !is_network_admin()) {
+            $network_settings = get_site_option('softworld_ai_seo_network_settings', []);
+            $override_approved = get_option('softworld_ai_seo_override_approved', false);
 
+            // If overrides are not allowed and site doesn't have approval, show limited menu
+            if (empty($network_settings['allow_site_overrides']) && !$override_approved) {
+                add_menu_page(
+                    'Softworld SEO',
+                    'Softworld SEO',
+                    'manage_options',
+                    'softworld-ai-seo',
+                    [$this, 'render_restricted_dashboard'],
+                    'dashicons-chart-area',
+                    80
+                );
+                return;
+            }
+
+            // If overrides are allowed but not approved, show override request page
+            if (!empty($network_settings['allow_site_overrides']) && !$override_approved) {
+                add_menu_page(
+                    'Softworld SEO',
+                    'Softworld SEO',
+                    'manage_options',
+                    'softworld-ai-seo',
+                    [$this->multisite_manager, 'render_site_override_page'],
+                    'dashicons-chart-area',
+                    80
+                );
+                return;
+            }
+        }
+
+        // Regular menu for single site or approved multisite subsites
         add_menu_page(
-            'Softworld SEO',                    // Page title
-            'Softworld SEO',                    // Menu title
-            'manage_options',                   // Capability
-            'softworld-ai-seo',                    // Menu slug
-            'softworldit_render_dashboard',   // Callback
-            'dashicons-chart-area',             // Icon
-            80                                  // Position
+            'Softworld SEO',
+            'Softworld SEO',
+            'manage_options',
+            'softworld-ai-seo',
+            'softworldit_render_dashboard',
+            'dashicons-chart-area',
+            80
         );
 
         add_submenu_page('softworld-ai-seo', 'Setup Wizard', 'Setup Wizard', 'manage_options', 'softworldit-setup', 'swit_render_setup_wizard');
@@ -775,6 +1133,136 @@ class Softworld_AI_SEO_Plugin
         );
     }
 
+    /**
+     * Register Network Admin Menu - FIXED: Single method only
+     */
+    public function register_network_admin_menu()
+    {
+        if (!is_multisite() || !is_network_admin()) {
+            return;
+        }
+
+           // Ensure manager is available
+        if (!$this->multisite_manager) {
+            $this->multisite_manager = new Softworld_AI_SEO_Multisite_Network_Manager('softworld-ai-seo');
+        }
+
+        // Add main network menu
+        add_menu_page(
+            __('Softworld SEO Network', 'softworld-ai-seo'),
+            __('Softworld SEO Network', 'softworld-ai-seo'),
+            'manage_network',
+            'softworld-ai-seo-network',
+            [$this->multisite_manager, 'render_network_admin_page'],
+            'dashicons-chart-area',
+            80
+        );
+
+        // Add submenu items
+        add_submenu_page(
+            'softworld-ai-seo-network',
+            __('Network Dashboard', 'softworld-ai-seo'),
+            __('Dashboard', 'softworld-ai-seo'),
+            'manage_network',
+            'softworld-ai-seo-network',
+            [$this->multisite_manager, 'render_network_admin_page']
+        );
+
+        add_submenu_page(
+            'softworld-ai-seo-network',
+            __('License Management', 'softworld-ai-seo'),
+            __('License Management', 'softworld-ai-seo'),
+            'manage_network',
+            'softworld-ai-seo-network-license',
+            [$this->multisite_manager, 'render_license_page']
+        );
+
+        add_submenu_page(
+            'softworld-ai-seo-network',
+            __('Network Settings', 'softworld-ai-seo'),
+            __('Network Settings', 'softworld-ai-seo'),
+            'manage_network',
+            'softworld-ai-seo-network-settings',
+            [$this->multisite_manager, 'render_network_settings_page']
+        );
+
+        add_submenu_page(
+            'softworld-ai-seo-network',
+            __('Import/Export', 'softworld-ai-seo'),
+            __('Import/Export', 'softworld-ai-seo'),
+            'manage_network',
+            'softworld-ai-seo-network-import-export',
+            [$this->multisite_manager, 'render_import_export_page']
+        );
+    }
+
+    /**
+     * Render Restricted Dashboard for sites without override permission
+     */
+    public function render_restricted_dashboard()
+    {
+        ?>
+        <div class="wrap">
+            <h1><?php _e('Softworld SEO', 'softworld-ai-seo'); ?></h1>
+            <div class="notice notice-info">
+                <p><?php _e('This site uses network-managed SEO settings. Contact your network administrator for configuration changes.', 'softworld-ai-seo'); ?>
+                </p>
+            </div>
+
+            <div class="softworld-restricted-info">
+                <h2><?php _e('Current SEO Settings', 'softworld-ai-seo'); ?></h2>
+                <p><?php _e('The following SEO settings are being applied from the network configuration:', 'softworld-ai-seo'); ?>
+                </p>
+
+                <?php
+                $network_settings = get_site_option('softworld_ai_seo_network_settings', []);
+                if (!empty($network_settings)):
+                    ?>
+                    <table class="wp-list-table widefat fixed striped">
+                        <thead>
+                            <tr>
+                                <th><?php _e('Setting', 'softworld-ai-seo'); ?></th>
+                                <th><?php _e('Value', 'softworld-ai-seo'); ?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (!empty($network_settings['default_seo_title'])): ?>
+                                <tr>
+                                    <td><?php _e('Default SEO Title', 'softworld-ai-seo'); ?></td>
+                                    <td><?php echo esc_html($network_settings['default_seo_title']); ?></td>
+                                </tr>
+                            <?php endif; ?>
+                            <?php if (!empty($network_settings['default_seo_description'])): ?>
+                                <tr>
+                                    <td><?php _e('Default SEO Description', 'softworld-ai-seo'); ?></td>
+                                    <td><?php echo esc_html($network_settings['default_seo_description']); ?></td>
+                                </tr>
+                            <?php endif; ?>
+                            <tr>
+                                <td><?php _e('Ping Search Engines', 'softworld-ai-seo'); ?></td>
+                                <td><?php echo !empty($network_settings['ping_search_engines']) ? __('Enabled', 'softworld-ai-seo') : __('Disabled', 'softworld-ai-seo'); ?>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><?php _e('Include Posts in Sitemap', 'softworld-ai-seo'); ?></td>
+                                <td><?php echo !empty($network_settings['include_posts']) ? __('Enabled', 'softworld-ai-seo') : __('Disabled', 'softworld-ai-seo'); ?>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><?php _e('Include Pages in Sitemap', 'softworld-ai-seo'); ?></td>
+                                <td><?php echo !empty($network_settings['include_pages']) ? __('Enabled', 'softworld-ai-seo') : __('Disabled', 'softworld-ai-seo'); ?>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                <?php else: ?>
+                    <p><?php _e('No network settings configured yet.', 'softworld-ai-seo'); ?></p>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php
+    }
+
     public function render_schema_admin()
     {
         $this->schema_manager->render_admin_page();
@@ -807,11 +1295,6 @@ class Softworld_AI_SEO_Plugin
         echo '<p>Welcome to the SOFTWORLD AI SEO Plugin.</p></div>';
     }
 
-    /**
-     * Render Sitemap Admin Page
-     */
-    // Add this to your main plugin class
-// Add this to your main plugin class
     public function render_sitemap_admin()
     {
         // Define default settings
@@ -844,9 +1327,11 @@ class Softworld_AI_SEO_Plugin
         // Handle form submission
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (isset($_POST['regenerate_rules'])) {
-                SoftworldIT_SEO_Sitemap::add_rewrite();
-                flush_rewrite_rules();
-                echo '<div class="updated notice"><p>Sitemap rules regenerated successfully.</p></div>';
+                if (class_exists('SoftworldIT_SEO_Sitemap')) {
+                    SoftworldIT_SEO_Sitemap::add_rewrite();
+                    flush_rewrite_rules();
+                    echo '<div class="updated notice"><p>Sitemap rules regenerated successfully.</p></div>';
+                }
             } elseif (isset($_POST['save_settings'])) {
                 // Save sitemap settings
                 $new_settings = [
@@ -882,8 +1367,10 @@ class Softworld_AI_SEO_Plugin
                 echo '<div class="updated notice"><p>Sitemap settings saved successfully.</p></div>';
             } elseif (isset($_POST['ping_now'])) {
                 // Manually ping search engines
-                SoftworldIT_SEO_Sitemap::manual_ping_search_engines();
-                echo '<div class="updated notice"><p>Search engines pinged successfully.</p></div>';
+                if (class_exists('SoftworldIT_SEO_Sitemap')) {
+                    SoftworldIT_SEO_Sitemap::manual_ping_search_engines();
+                    echo '<div class="updated notice"><p>Search engines pinged successfully.</p></div>';
+                }
             }
         }
 
@@ -940,7 +1427,10 @@ class Softworld_AI_SEO_Plugin
         ];
 
         // Get ping log
-        $ping_log = SoftworldIT_SEO_Sitemap::get_ping_log();
+        $ping_log = [];
+        if (class_exists('SoftworldIT_SEO_Sitemap')) {
+            $ping_log = SoftworldIT_SEO_Sitemap::get_ping_log();
+        }
 
         // Enqueue scripts and styles for the improved UI
         wp_enqueue_script('jquery-ui-autocomplete');
@@ -964,6 +1454,9 @@ class Softworld_AI_SEO_Plugin
                     <?php echo esc_url(home_url('/sitemap.xml')); ?>
                 </a>
             </p>
+
+            <!-- Sitemap form content would continue here... -->
+            <p>Sitemap configuration interface would be displayed here with all the form elements for settings.</p>
 
             <div class="softworld-sitemap-container">
                 <form method="post" id="softworld-sitemap-form">
@@ -1329,15 +1822,47 @@ class Softworld_AI_SEO_Plugin
                 <form method="post">
                     <?php submit_button('Regenerate Sitemap Rules', 'secondary', 'regenerate_rules'); ?>
                 </form>
-                <a href="<?php echo esc_url(home_url('/sitemap.xml')); ?>" style="margin-top: 6px;" target="_blank"
-                    class="button button-primary">View
-                    Sitemap</a>
+                <a href="<?php echo esc_url(home_url('/sitemap.xml')); ?>" style="margin-top: 6px;" target="_blank" class="button button-primary">View Sitemap</a>
             </div>
+
         </div>
         <?php
     }
 }
 
 // Initialize plugin
-new Softworld_AI_SEO_Plugin();
-?>
+$GLOBALS['softworld_ai_seo_plugin'] = new Softworld_AI_SEO_Plugin();
+
+/**
+ * Add this function to check multisite licensing
+ */
+function softworld_ai_seo_is_license_valid()
+{
+    if (!is_multisite()) {
+        // For single site, check individual license
+        return get_option('softworld_ai_seo_license_valid', false);
+    }
+
+    // For multisite, check network license
+    $license_info = get_site_option('softworld_ai_seo_network_license', []);
+    return !empty($license_info['valid']);
+}
+
+/**
+ * Add this filter to modify settings retrieval in multisite
+ */
+add_filter('option_softworld_ai_seo_title', function ($value, $option) {
+    global $softworld_ai_seo_plugin;
+    if ($softworld_ai_seo_plugin && method_exists($softworld_ai_seo_plugin, 'get_effective_setting')) {
+        return $softworld_ai_seo_plugin->get_effective_setting($option, $value);
+    }
+    return $value;
+}, 10, 2);
+
+add_filter('option_softworld_ai_seo_description', function ($value, $option) {
+    global $softworld_ai_seo_plugin;
+    if ($softworld_ai_seo_plugin && method_exists($softworld_ai_seo_plugin, 'get_effective_setting')) {
+        return $softworld_ai_seo_plugin->get_effective_setting($option, $value);
+    }
+    return $value;
+}, 10, 2);
