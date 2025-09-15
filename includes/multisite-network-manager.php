@@ -23,7 +23,7 @@ class Softworld_AI_SEO_Multisite_Network_Manager
             $this->init();
         }
     }
-
+    
     public function init()
     {
         // Network admin hooks - Only add these if we're in network context
@@ -62,7 +62,7 @@ class Softworld_AI_SEO_Multisite_Network_Manager
         add_action('do_robots', [$this, 'handle_network_robots_txt'], 1);
         add_filter('robots_txt', [$this, 'filter_network_robots_txt'], 10, 2);
     }
-
+    
     public function enqueue_network_admin_assets()
     {
         // Only enqueue on network admin pages
@@ -145,173 +145,173 @@ class Softworld_AI_SEO_Multisite_Network_Manager
         $network_stats = $this->get_network_statistics();
 
         ?>
-                        <div class="wrap softworld-network-wrap">
-                            <h1><?php _e('Softworld SEO Network Dashboard', 'softworld-ai-seo'); ?></h1>
+                                <div class="wrap softworld-network-wrap">
+                                    <h1><?php _e('Softworld SEO Network Dashboard', 'softworld-ai-seo'); ?></h1>
             
-                            <!-- License Status Card -->
-                            <div class="softworld-network-cards">
-                                <div class="softworld-network-card">
-                                    <h3><?php _e('License Status', 'softworld-ai-seo'); ?></h3>
-                                    <div class="license-status <?php echo $license_info['valid'] ? 'valid' : 'invalid'; ?>">
-                                        <span class="status-indicator"></span>
-                                        <?php if ($license_info['valid']): ?>
-                                                    <span><?php _e('Active', 'softworld-ai-seo'); ?></span>
-                                                    <small><?php printf(__('Expires: %s', 'softworld-ai-seo'), $license_info['expires']); ?></small>
-                                        <?php else: ?>
-                                                    <span><?php _e('Inactive', 'softworld-ai-seo'); ?></span>
-                                                    <small><a href="<?php echo network_admin_url('admin.php?page=softworld-ai-seo-network-license'); ?>">Activate License</a></small>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
+                                    <!-- License Status Card -->
+                                    <div class="softworld-network-cards">
+                                        <div class="softworld-network-card">
+                                            <h3><?php _e('License Status', 'softworld-ai-seo'); ?></h3>
+                                            <div class="license-status <?php echo $license_info['valid'] ? 'valid' : 'invalid'; ?>">
+                                                <span class="status-indicator"></span>
+                                                <?php if ($license_info['valid']): ?>
+                                                                <span><?php _e('Active', 'softworld-ai-seo'); ?></span>
+                                                                <small><?php printf(__('Expires: %s', 'softworld-ai-seo'), $license_info['expires']); ?></small>
+                                                <?php else: ?>
+                                                                <span><?php _e('Inactive', 'softworld-ai-seo'); ?></span>
+                                                                <small><a href="<?php echo network_admin_url('admin.php?page=softworld-ai-seo-network-license'); ?>">Activate License</a></small>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
 
-                                <div class="softworld-network-card">
-                                    <h3><?php _e('Network Statistics', 'softworld-ai-seo'); ?></h3>
-                                    <ul>
-                                        <li><?php printf(__('Total Sites: %d', 'softworld-ai-seo'), $network_stats['total_sites']); ?></li>
-                                        <li><?php printf(__('Active Sites: %d', 'softworld-ai-seo'), $network_stats['active_sites']); ?></li>
-                                        <li><?php printf(__('Sites with Override: %d', 'softworld-ai-seo'), $network_stats['override_sites']); ?></li>
-                                        <li><?php printf(__('Sitemaps Generated: %d', 'softworld-ai-seo'), $network_stats['sitemap_count']); ?></li>
-                                    </ul>
-                                </div>
+                                        <div class="softworld-network-card">
+                                            <h3><?php _e('Network Statistics', 'softworld-ai-seo'); ?></h3>
+                                            <ul>
+                                                <li><?php printf(__('Total Sites: %d', 'softworld-ai-seo'), $network_stats['total_sites']); ?></li>
+                                                <li><?php printf(__('Active Sites: %d', 'softworld-ai-seo'), $network_stats['active_sites']); ?></li>
+                                                <li><?php printf(__('Sites with Override: %d', 'softworld-ai-seo'), $network_stats['override_sites']); ?></li>
+                                                <li><?php printf(__('Sitemaps Generated: %d', 'softworld-ai-seo'), $network_stats['sitemap_count']); ?></li>
+                                            </ul>
+                                        </div>
 
-                                <div class="softworld-network-card">
-                                    <h3><?php _e('Quick Actions', 'softworld-ai-seo'); ?></h3>
-                                    <div class="quick-actions">
-                                        <a href="<?php echo network_admin_url('admin.php?page=softworld-ai-seo-network-settings'); ?>" class="button button-primary">
-                                            <?php _e('Manage Settings', 'softworld-ai-seo'); ?>
-                                        </a>
-                                        <a href="<?php echo network_admin_url('admin.php?page=softworld-ai-seo-network-nginx'); ?>" class="button button-secondary">
-                                            <?php _e('NGINX Rules', 'softworld-ai-seo'); ?>
-                                        </a>
-                                        <a href="<?php echo network_admin_url('admin.php?page=softworld-ai-seo-network-robots'); ?>" class="button button-secondary">
-                                            <?php _e('Robots.txt Manager', 'softworld-ai-seo'); ?>
-                                        </a>
+                                        <div class="softworld-network-card">
+                                            <h3><?php _e('Quick Actions', 'softworld-ai-seo'); ?></h3>
+                                            <div class="quick-actions">
+                                                <a href="<?php echo network_admin_url('admin.php?page=softworld-ai-seo-network-settings'); ?>" class="button button-primary">
+                                                    <?php _e('Manage Settings', 'softworld-ai-seo'); ?>
+                                                </a>
+                                                <a href="<?php echo network_admin_url('admin.php?page=softworld-ai-seo-network-nginx'); ?>" class="button button-secondary">
+                                                    <?php _e('NGINX Rules', 'softworld-ai-seo'); ?>
+                                                </a>
+                                                <a href="<?php echo network_admin_url('admin.php?page=softworld-ai-seo-network-robots'); ?>" class="button button-secondary">
+                                                    <?php _e('Robots.txt Manager', 'softworld-ai-seo'); ?>
+                                                </a>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
 
-                            <!-- NEW: NGINX & Robots.txt Quick Status -->
-                            <div class="softworld-network-tools-status">
-                                <h2><?php _e('Network Tools Status', 'softworld-ai-seo'); ?></h2>
-                                <div class="tools-status-grid">
-                                    <div class="tool-status-item">
-                                        <h4><?php _e('NGINX Sitemap Rules', 'softworld-ai-seo'); ?></h4>
-                                        <p class="status-text"><?php echo $this->get_nginx_rules_status(); ?></p>
-                                        <button type="button" id="quick-generate-nginx" class="button button-small">
-                                            <?php _e('Generate Rules', 'softworld-ai-seo'); ?>
-                                        </button>
+                                    <!-- NEW: NGINX & Robots.txt Quick Status -->
+                                    <div class="softworld-network-tools-status">
+                                        <h2><?php _e('Network Tools Status', 'softworld-ai-seo'); ?></h2>
+                                        <div class="tools-status-grid">
+                                            <div class="tool-status-item">
+                                                <h4><?php _e('NGINX Sitemap Rules', 'softworld-ai-seo'); ?></h4>
+                                                <p class="status-text"><?php echo $this->get_nginx_rules_status(); ?></p>
+                                                <button type="button" id="quick-generate-nginx" class="button button-small">
+                                                    <?php _e('Generate Rules', 'softworld-ai-seo'); ?>
+                                                </button>
+                                            </div>
+                                            <div class="tool-status-item">
+                                                <h4><?php _e('Network Robots.txt', 'softworld-ai-seo'); ?></h4>
+                                                <p class="status-text"><?php echo $this->get_robots_txt_status(); ?></p>
+                                                <button type="button" id="quick-apply-robots" class="button button-small">
+                                                    <?php _e('Apply to All Sites', 'softworld-ai-seo'); ?>
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="tool-status-item">
-                                        <h4><?php _e('Network Robots.txt', 'softworld-ai-seo'); ?></h4>
-                                        <p class="status-text"><?php echo $this->get_robots_txt_status(); ?></p>
-                                        <button type="button" id="quick-apply-robots" class="button button-small">
-                                            <?php _e('Apply to All Sites', 'softworld-ai-seo'); ?>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
 
-                            <!-- Sites Overview -->
-                            <div class="softworld-sites-overview">
-                                <h2><?php _e('Sites Overview', 'softworld-ai-seo'); ?></h2>
-                                <div class="sites-table-container">
-                                    <table class="wp-list-table widefat fixed striped">
-                                        <thead>
-                                            <tr>
-                                                <th><?php _e('Site', 'softworld-ai-seo'); ?></th>
-                                                <th><?php _e('Status', 'softworld-ai-seo'); ?></th>
-                                                <th><?php _e('Settings', 'softworld-ai-seo'); ?></th>
-                                                <th><?php _e('Sitemap', 'softworld-ai-seo'); ?></th>
-                                                <th><?php _e('Robots.txt', 'softworld-ai-seo'); ?></th>
-                                                <th><?php _e('Actions', 'softworld-ai-seo'); ?></th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php if (!empty($sites)): ?>
-                                                        <?php foreach ($sites as $site): ?>
+                                    <!-- Sites Overview -->
+                                    <div class="softworld-sites-overview">
+                                        <h2><?php _e('Sites Overview', 'softworld-ai-seo'); ?></h2>
+                                        <div class="sites-table-container">
+                                            <table class="wp-list-table widefat fixed striped">
+                                                <thead>
+                                                    <tr>
+                                                        <th><?php _e('Site', 'softworld-ai-seo'); ?></th>
+                                                        <th><?php _e('Status', 'softworld-ai-seo'); ?></th>
+                                                        <th><?php _e('Settings', 'softworld-ai-seo'); ?></th>
+                                                        <th><?php _e('Sitemap', 'softworld-ai-seo'); ?></th>
+                                                        <th><?php _e('Robots.txt', 'softworld-ai-seo'); ?></th>
+                                                        <th><?php _e('Actions', 'softworld-ai-seo'); ?></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?php if (!empty($sites)): ?>
+                                                                    <?php foreach ($sites as $site): ?>
+                                                                                    <tr>
+                                                                                        <td>
+                                                                                            <strong><?php echo esc_html($site['name']); ?></strong>
+                                                                                            <br><small><?php echo esc_url($site['url']); ?></small>
+                                                                                        </td>
+                                                                                        <td>
+                                                                                            <span class="site-status <?php echo $site['active'] ? 'active' : 'inactive'; ?>">
+                                                                                                <?php echo $site['active'] ? __('Active', 'softworld-ai-seo') : __('Inactive', 'softworld-ai-seo'); ?>
+                                                                                            </span>
+                                                                                        </td>
+                                                                                        <td>
+                                                                                            <?php if ($site['has_override']): ?>
+                                                                                                            <span class="settings-override"><?php _e('Override Active', 'softworld-ai-seo'); ?></span>
+                                                                                            <?php else: ?>
+                                                                                                            <span class="settings-inherited"><?php _e('Inherited', 'softworld-ai-seo'); ?></span>
+                                                                                            <?php endif; ?>
+                                                                                        </td>
+                                                                                        <td>
+                                                                                            <?php if ($site['has_sitemap']): ?>
+                                                                                                            <a href="<?php echo esc_url($site['sitemap_url']); ?>" target="_blank" class="sitemap-link">
+                                                                                                                <?php _e('View Sitemap', 'softworld-ai-seo'); ?>
+                                                                                                            </a>
+                                                                                            <?php else: ?>
+                                                                                                            <span class="no-sitemap"><?php _e('No Sitemap', 'softworld-ai-seo'); ?></span>
+                                                                                            <?php endif; ?>
+                                                                                        </td>
+                                                                                        <td>
+                                                                                            <?php if ($site['custom_robots']): ?>
+                                                                                                            <span class="custom-robots"><?php _e('Custom', 'softworld-ai-seo'); ?></span>
+                                                                                            <?php else: ?>
+                                                                                                            <span class="inherited-robots"><?php _e('Network', 'softworld-ai-seo'); ?></span>
+                                                                                            <?php endif; ?>
+                                                                                        </td>
+                                                                                        <td>
+                                                                                            <a href="<?php echo $site['admin_url']; ?>" class="button button-small" target="_blank">
+                                                                                                <?php _e('Visit Admin', 'softworld-ai-seo'); ?>
+                                                                                            </a>
+                                                                                        </td>
+                                                                                    </tr>
+                                                                    <?php endforeach; ?>
+                                                    <?php else: ?>
                                                                     <tr>
-                                                                        <td>
-                                                                            <strong><?php echo esc_html($site['name']); ?></strong>
-                                                                            <br><small><?php echo esc_url($site['url']); ?></small>
-                                                                        </td>
-                                                                        <td>
-                                                                            <span class="site-status <?php echo $site['active'] ? 'active' : 'inactive'; ?>">
-                                                                                <?php echo $site['active'] ? __('Active', 'softworld-ai-seo') : __('Inactive', 'softworld-ai-seo'); ?>
-                                                                            </span>
-                                                                        </td>
-                                                                        <td>
-                                                                            <?php if ($site['has_override']): ?>
-                                                                                        <span class="settings-override"><?php _e('Override Active', 'softworld-ai-seo'); ?></span>
-                                                                            <?php else: ?>
-                                                                                        <span class="settings-inherited"><?php _e('Inherited', 'softworld-ai-seo'); ?></span>
-                                                                            <?php endif; ?>
-                                                                        </td>
-                                                                        <td>
-                                                                            <?php if ($site['has_sitemap']): ?>
-                                                                                        <a href="<?php echo esc_url($site['sitemap_url']); ?>" target="_blank" class="sitemap-link">
-                                                                                            <?php _e('View Sitemap', 'softworld-ai-seo'); ?>
-                                                                                        </a>
-                                                                            <?php else: ?>
-                                                                                        <span class="no-sitemap"><?php _e('No Sitemap', 'softworld-ai-seo'); ?></span>
-                                                                            <?php endif; ?>
-                                                                        </td>
-                                                                        <td>
-                                                                            <?php if ($site['custom_robots']): ?>
-                                                                                        <span class="custom-robots"><?php _e('Custom', 'softworld-ai-seo'); ?></span>
-                                                                            <?php else: ?>
-                                                                                        <span class="inherited-robots"><?php _e('Network', 'softworld-ai-seo'); ?></span>
-                                                                            <?php endif; ?>
-                                                                        </td>
-                                                                        <td>
-                                                                            <a href="<?php echo $site['admin_url']; ?>" class="button button-small" target="_blank">
-                                                                                <?php _e('Visit Admin', 'softworld-ai-seo'); ?>
-                                                                            </a>
-                                                                        </td>
+                                                                        <td colspan="6"><?php _e('No sites found.', 'softworld-ai-seo'); ?></td>
                                                                     </tr>
-                                                        <?php endforeach; ?>
-                                            <?php else: ?>
-                                                        <tr>
-                                                            <td colspan="6"><?php _e('No sites found.', 'softworld-ai-seo'); ?></td>
-                                                        </tr>
-                                            <?php endif; ?>
-                                        </tbody>
-                                    </table>
+                                                    <?php endif; ?>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
         
-                        <!-- Enhanced Styles -->
-                        <style>
-                            .softworld-network-cards { display: flex; gap: 20px; margin: 20px 0; flex-wrap: wrap; }
-                            .softworld-network-card { background: white; padding: 20px; border: 1px solid #ccd0d4; flex: 1; min-width: 300px; }
-                            .license-status.valid { color: #00a32a; }
-                            .license-status.invalid { color: #d63638; }
-                            .site-status.active { color: #00a32a; }
-                            .site-status.inactive { color: #d63638; }
-                            .settings-override { color: #dba617; font-weight: bold; }
-                            .settings-inherited { color: #2271b1; }
-                            .quick-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-                            .status-indicator { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
-                            .license-status.valid .status-indicator { background: #00a32a; }
-                            .license-status.invalid .status-indicator { background: #d63638; }
+                                <!-- Enhanced Styles -->
+                                <style>
+                                    .softworld-network-cards { display: flex; gap: 20px; margin: 20px 0; flex-wrap: wrap; }
+                                    .softworld-network-card { background: white; padding: 20px; border: 1px solid #ccd0d4; flex: 1; min-width: 300px; }
+                                    .license-status.valid { color: #00a32a; }
+                                    .license-status.invalid { color: #d63638; }
+                                    .site-status.active { color: #00a32a; }
+                                    .site-status.inactive { color: #d63638; }
+                                    .settings-override { color: #dba617; font-weight: bold; }
+                                    .settings-inherited { color: #2271b1; }
+                                    .quick-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+                                    .status-indicator { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+                                    .license-status.valid .status-indicator { background: #00a32a; }
+                                    .license-status.invalid .status-indicator { background: #d63638; }
             
-                            /* NEW: Tools status styles */
-                            .softworld-network-tools-status { margin: 20px 0; padding: 20px; background: white; border: 1px solid #ccd0d4; }
-                            .tools-status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px; }
-                            .tool-status-item { padding: 15px; border: 1px solid #ddd; border-radius: 4px; }
-                            .tool-status-item h4 { margin: 0 0 10px 0; color: #23282d; }
-                            .tool-status-item .status-text { margin: 5px 0 10px 0; font-size: 13px; color: #666; }
-                            .sitemap-link { color: #00a32a; text-decoration: none; }
-                            .no-sitemap { color: #d63638; }
-                            .custom-robots { color: #dba617; }
-                            .inherited-robots { color: #2271b1; }
+                                    /* NEW: Tools status styles */
+                                    .softworld-network-tools-status { margin: 20px 0; padding: 20px; background: white; border: 1px solid #ccd0d4; }
+                                    .tools-status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px; }
+                                    .tool-status-item { padding: 15px; border: 1px solid #ddd; border-radius: 4px; }
+                                    .tool-status-item h4 { margin: 0 0 10px 0; color: #23282d; }
+                                    .tool-status-item .status-text { margin: 5px 0 10px 0; font-size: 13px; color: #666; }
+                                    .sitemap-link { color: #00a32a; text-decoration: none; }
+                                    .no-sitemap { color: #d63638; }
+                                    .custom-robots { color: #dba617; }
+                                    .inherited-robots { color: #2271b1; }
             
-                            @media (max-width: 768px) {
-                                .tools-status-grid { grid-template-columns: 1fr; }
-                                .softworld-network-cards { flex-direction: column; }
-                            }
-                        </style>
-                        <?php
+                                    @media (max-width: 768px) {
+                                        .tools-status-grid { grid-template-columns: 1fr; }
+                                        .softworld-network-cards { flex-direction: column; }
+                                    }
+                                </style>
+                                <?php
     }
 
     /**
@@ -327,179 +327,179 @@ class Softworld_AI_SEO_Multisite_Network_Manager
         $generated_rules = get_site_option('softworld_ai_seo_nginx_rules', '');
 
         ?>
-                        <div class="wrap softworld-network-wrap">
-                            <h1><?php _e('NGINX Sitemap Rewrite Rules', 'softworld-ai-seo'); ?></h1>
+                                <div class="wrap softworld-network-wrap">
+                                    <h1><?php _e('NGINX Sitemap Rewrite Rules', 'softworld-ai-seo'); ?></h1>
             
-                            <div class="nginx-rules-container">
-                                <div class="nginx-info-section">
-                                    <h2><?php _e('About NGINX Sitemap Rules', 'softworld-ai-seo'); ?></h2>
-                                    <p><?php _e('These rules help NGINX properly handle sitemap requests across your multisite network. Add these rules to your NGINX server configuration.', 'softworld-ai-seo'); ?></p>
+                                    <div class="nginx-rules-container">
+                                        <div class="nginx-info-section">
+                                            <h2><?php _e('About NGINX Sitemap Rules', 'softworld-ai-seo'); ?></h2>
+                                            <p><?php _e('These rules help NGINX properly handle sitemap requests across your multisite network. Add these rules to your NGINX server configuration.', 'softworld-ai-seo'); ?></p>
                     
-                                    <div class="nginx-benefits">
-                                        <h3><?php _e('Benefits:', 'softworld-ai-seo'); ?></h3>
-                                        <ul>
-                                            <li><?php _e('Improved sitemap loading performance', 'softworld-ai-seo'); ?></li>
-                                            <li><?php _e('Better SEO crawler experience', 'softworld-ai-seo'); ?></li>
-                                            <li><?php _e('Proper handling of multisite sitemap requests', 'softworld-ai-seo'); ?></li>
-                                            <li><?php _e('Reduced server load', 'softworld-ai-seo'); ?></li>
-                                        </ul>
-                                    </div>
-                                </div>
-
-                                <div class="nginx-generator-section">
-                                    <h2><?php _e('Generate NGINX Rules', 'softworld-ai-seo'); ?></h2>
-                                    <form id="nginx-rules-form">
-                                        <?php wp_nonce_field('softworld_network_nginx', 'nginx_nonce'); ?>
-                        
-                                        <table class="form-table">
-                                            <tr>
-                                                <th scope="row"><?php _e('Include Sites', 'softworld-ai-seo'); ?></th>
-                                                <td>
-                                                    <fieldset>
-                                                        <label>
-                                                            <input type="checkbox" name="include_all_sites" value="1" checked>
-                                                            <?php _e('Generate rules for all active sites', 'softworld-ai-seo'); ?>
-                                                        </label>
-                                                        <br>
-                                                        <label>
-                                                            <input type="checkbox" name="include_subdirs" value="1">
-                                                            <?php _e('Include subdirectory installations', 'softworld-ai-seo'); ?>
-                                                        </label>
-                                                        <br>
-                                                        <label>
-                                                            <input type="checkbox" name="include_main_site" value="1" checked>
-                                                            <?php _e('Include main site', 'softworld-ai-seo'); ?>
-                                                        </label>
-                                                    </fieldset>
-                                                </td>
-                                            </tr>
-                            
-                                            <tr>
-                                                <th scope="row"><?php _e('Rule Options', 'softworld-ai-seo'); ?></th>
-                                                <td>
-                                                    <fieldset>
-                                                        <label>
-                                                            <input type="checkbox" name="add_caching" value="1" checked>
-                                                            <?php _e('Add caching headers for sitemaps', 'softworld-ai-seo'); ?>
-                                                        </label>
-                                                        <br>
-                                                        <label>
-                                                            <input type="checkbox" name="add_compression" value="1" checked>
-                                                            <?php _e('Enable gzip compression for XML files', 'softworld-ai-seo'); ?>
-                                                        </label>
-                                                        <br>
-                                                        <label>
-                                                            <input type="checkbox" name="add_security" value="1">
-                                                            <?php _e('Add security headers', 'softworld-ai-seo'); ?>
-                                                        </label>
-                                                    </fieldset>
-                                                </td>
-                                            </tr>
-
-                                            <tr>
-                                                <th scope="row"><?php _e('Cache Duration', 'softworld-ai-seo'); ?></th>
-                                                <td>
-                                                    <select name="cache_duration">
-                                                        <option value="3600"><?php _e('1 Hour', 'softworld-ai-seo'); ?></option>
-                                                        <option value="21600" selected><?php _e('6 Hours', 'softworld-ai-seo'); ?></option>
-                                                        <option value="86400"><?php _e('24 Hours', 'softworld-ai-seo'); ?></option>
-                                                        <option value="604800"><?php _e('1 Week', 'softworld-ai-seo'); ?></option>
-                                                    </select>
-                                                    <p class="description">
-                                                        <?php _e('How long browsers and CDNs should cache sitemap files.', 'softworld-ai-seo'); ?>
-                                                    </p>
-                                                </td>
-                                            </tr>
-                                        </table>
-                        
-                                        <p class="submit">
-                                            <button type="submit" class="button button-primary">
-                                                <?php _e('Generate NGINX Rules', 'softworld-ai-seo'); ?>
-                                            </button>
-                                        </p>
-                                    </form>
-                                </div>
-
-                                <?php if ($generated_rules): ?>
-                                        <div class="nginx-rules-display">
-                                            <h2><?php _e('Generated NGINX Rules', 'softworld-ai-seo'); ?></h2>
-                                            <p><?php _e('Copy the following rules to your NGINX server configuration:', 'softworld-ai-seo'); ?></p>
-                    
-                                            <div class="nginx-rules-output">
-                                                <div class="rules-header">
-                                                    <span><?php _e('NGINX Configuration', 'softworld-ai-seo'); ?></span>
-                                                    <button type="button" class="copy-rules-btn" data-clipboard-target="#nginx-rules-text">
-                                                        <?php _e('Copy to Clipboard', 'softworld-ai-seo'); ?>
-                                                    </button>
-                                                </div>
-                                                <pre id="nginx-rules-text"><code><?php echo esc_html($generated_rules); ?></code></pre>
-                                            </div>
-                    
-                                            <div class="nginx-installation-guide">
-                                                <h3><?php _e('Installation Instructions', 'softworld-ai-seo'); ?></h3>
-                                                <ol>
-                                                    <li><?php _e('Copy the generated rules above', 'softworld-ai-seo'); ?></li>
-                                                    <li><?php _e('Open your NGINX server configuration file (usually in /etc/nginx/sites-available/)', 'softworld-ai-seo'); ?></li>
-                                                    <li><?php _e('Paste the rules inside your server block', 'softworld-ai-seo'); ?></li>
-                                                    <li><?php _e('Test the configuration: nginx -t', 'softworld-ai-seo'); ?></li>
-                                                    <li><?php _e('Reload NGINX: systemctl reload nginx', 'softworld-ai-seo'); ?></li>
-                                                </ol>
+                                            <div class="nginx-benefits">
+                                                <h3><?php _e('Benefits:', 'softworld-ai-seo'); ?></h3>
+                                                <ul>
+                                                    <li><?php _e('Improved sitemap loading performance', 'softworld-ai-seo'); ?></li>
+                                                    <li><?php _e('Better SEO crawler experience', 'softworld-ai-seo'); ?></li>
+                                                    <li><?php _e('Proper handling of multisite sitemap requests', 'softworld-ai-seo'); ?></li>
+                                                    <li><?php _e('Reduced server load', 'softworld-ai-seo'); ?></li>
+                                                </ul>
                                             </div>
                                         </div>
-                                <?php endif; ?>
 
-                                <!-- Site-specific Sitemap URLs -->
-                                <div class="sitemap-urls-section">
-                                    <h2><?php _e('Network Sitemap URLs', 'softworld-ai-seo'); ?></h2>
-                                    <div class="sitemap-urls-list">
-                                        <?php foreach ($sites as $site): ?>
-                                                    <?php if ($site['has_sitemap']): ?>
-                                                                <div class="sitemap-url-item">
-                                                                    <strong><?php echo esc_html($site['name']); ?></strong>
-                                                                    <br>
-                                                                    <a href="<?php echo esc_url($site['sitemap_url']); ?>" target="_blank">
-                                                                        <?php echo esc_url($site['sitemap_url']); ?>
-                                                                    </a>
-                                                                    <button type="button" class="copy-url-btn" data-url="<?php echo esc_url($site['sitemap_url']); ?>">
-                                                                        <?php _e('Copy', 'softworld-ai-seo'); ?>
-                                                                    </button>
-                                                                </div>
-                                                    <?php endif; ?>
-                                        <?php endforeach; ?>
+                                        <div class="nginx-generator-section">
+                                            <h2><?php _e('Generate NGINX Rules', 'softworld-ai-seo'); ?></h2>
+                                            <form id="nginx-rules-form">
+                                                <?php wp_nonce_field('softworld_network_nginx', 'nginx_nonce'); ?>
+                        
+                                                <table class="form-table">
+                                                    <tr>
+                                                        <th scope="row"><?php _e('Include Sites', 'softworld-ai-seo'); ?></th>
+                                                        <td>
+                                                            <fieldset>
+                                                                <label>
+                                                                    <input type="checkbox" name="include_all_sites" value="1" checked>
+                                                                    <?php _e('Generate rules for all active sites', 'softworld-ai-seo'); ?>
+                                                                </label>
+                                                                <br>
+                                                                <label>
+                                                                    <input type="checkbox" name="include_subdirs" value="1">
+                                                                    <?php _e('Include subdirectory installations', 'softworld-ai-seo'); ?>
+                                                                </label>
+                                                                <br>
+                                                                <label>
+                                                                    <input type="checkbox" name="include_main_site" value="1" checked>
+                                                                    <?php _e('Include main site', 'softworld-ai-seo'); ?>
+                                                                </label>
+                                                            </fieldset>
+                                                        </td>
+                                                    </tr>
+                            
+                                                    <tr>
+                                                        <th scope="row"><?php _e('Rule Options', 'softworld-ai-seo'); ?></th>
+                                                        <td>
+                                                            <fieldset>
+                                                                <label>
+                                                                    <input type="checkbox" name="add_caching" value="1" checked>
+                                                                    <?php _e('Add caching headers for sitemaps', 'softworld-ai-seo'); ?>
+                                                                </label>
+                                                                <br>
+                                                                <label>
+                                                                    <input type="checkbox" name="add_compression" value="1" checked>
+                                                                    <?php _e('Enable gzip compression for XML files', 'softworld-ai-seo'); ?>
+                                                                </label>
+                                                                <br>
+                                                                <label>
+                                                                    <input type="checkbox" name="add_security" value="1">
+                                                                    <?php _e('Add security headers', 'softworld-ai-seo'); ?>
+                                                                </label>
+                                                            </fieldset>
+                                                        </td>
+                                                    </tr>
+
+                                                    <tr>
+                                                        <th scope="row"><?php _e('Cache Duration', 'softworld-ai-seo'); ?></th>
+                                                        <td>
+                                                            <select name="cache_duration">
+                                                                <option value="3600"><?php _e('1 Hour', 'softworld-ai-seo'); ?></option>
+                                                                <option value="21600" selected><?php _e('6 Hours', 'softworld-ai-seo'); ?></option>
+                                                                <option value="86400"><?php _e('24 Hours', 'softworld-ai-seo'); ?></option>
+                                                                <option value="604800"><?php _e('1 Week', 'softworld-ai-seo'); ?></option>
+                                                            </select>
+                                                            <p class="description">
+                                                                <?php _e('How long browsers and CDNs should cache sitemap files.', 'softworld-ai-seo'); ?>
+                                                            </p>
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                        
+                                                <p class="submit">
+                                                    <button type="submit" class="button button-primary">
+                                                        <?php _e('Generate NGINX Rules', 'softworld-ai-seo'); ?>
+                                                    </button>
+                                                </p>
+                                            </form>
+                                        </div>
+
+                                        <?php if ($generated_rules): ?>
+                                                    <div class="nginx-rules-display">
+                                                        <h2><?php _e('Generated NGINX Rules', 'softworld-ai-seo'); ?></h2>
+                                                        <p><?php _e('Copy the following rules to your NGINX server configuration:', 'softworld-ai-seo'); ?></p>
+                    
+                                                        <div class="nginx-rules-output">
+                                                            <div class="rules-header">
+                                                                <span><?php _e('NGINX Configuration', 'softworld-ai-seo'); ?></span>
+                                                                <button type="button" class="copy-rules-btn" data-clipboard-target="#nginx-rules-text">
+                                                                    <?php _e('Copy to Clipboard', 'softworld-ai-seo'); ?>
+                                                                </button>
+                                                            </div>
+                                                            <pre id="nginx-rules-text"><code><?php echo esc_html($generated_rules); ?></code></pre>
+                                                        </div>
+                    
+                                                        <div class="nginx-installation-guide">
+                                                            <h3><?php _e('Installation Instructions', 'softworld-ai-seo'); ?></h3>
+                                                            <ol>
+                                                                <li><?php _e('Copy the generated rules above', 'softworld-ai-seo'); ?></li>
+                                                                <li><?php _e('Open your NGINX server configuration file (usually in /etc/nginx/sites-available/)', 'softworld-ai-seo'); ?></li>
+                                                                <li><?php _e('Paste the rules inside your server block', 'softworld-ai-seo'); ?></li>
+                                                                <li><?php _e('Test the configuration: nginx -t', 'softworld-ai-seo'); ?></li>
+                                                                <li><?php _e('Reload NGINX: systemctl reload nginx', 'softworld-ai-seo'); ?></li>
+                                                            </ol>
+                                                        </div>
+                                                    </div>
+                                        <?php endif; ?>
+
+                                        <!-- Site-specific Sitemap URLs -->
+                                        <div class="sitemap-urls-section">
+                                            <h2><?php _e('Network Sitemap URLs', 'softworld-ai-seo'); ?></h2>
+                                            <div class="sitemap-urls-list">
+                                                <?php foreach ($sites as $site): ?>
+                                                                <?php if ($site['has_sitemap']): ?>
+                                                                                <div class="sitemap-url-item">
+                                                                                    <strong><?php echo esc_html($site['name']); ?></strong>
+                                                                                    <br>
+                                                                                    <a href="<?php echo esc_url($site['sitemap_url']); ?>" target="_blank">
+                                                                                        <?php echo esc_url($site['sitemap_url']); ?>
+                                                                                    </a>
+                                                                                    <button type="button" class="copy-url-btn" data-url="<?php echo esc_url($site['sitemap_url']); ?>">
+                                                                                        <?php _e('Copy', 'softworld-ai-seo'); ?>
+                                                                                    </button>
+                                                                                </div>
+                                                                <?php endif; ?>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
         
-                        <style>
-                            .nginx-rules-container { max-width: 1200px; }
-                            .nginx-info-section, .nginx-generator-section, .nginx-rules-display, .sitemap-urls-section { 
-                                background: white; padding: 20px; margin: 20px 0; border: 1px solid #ccd0d4; 
-                            }
-                            .nginx-benefits ul { padding-left: 20px; }
-                            .nginx-rules-output { position: relative; }
-                            .rules-header { 
-                                display: flex; justify-content: space-between; align-items: center; 
-                                padding: 10px; background: #f1f3f4; border: 1px solid #ddd; 
-                            }
-                            .rules-header span { font-weight: bold; }
-                            .copy-rules-btn, .copy-url-btn { 
-                                background: #0073aa; color: white; border: none; padding: 5px 10px; 
-                                cursor: pointer; border-radius: 3px; 
-                            }
-                            #nginx-rules-text { 
-                                margin: 0; padding: 15px; background: #2d3748; color: #e2e8f0; 
-                                overflow-x: auto; font-family: 'Courier New', monospace; font-size: 13px; 
-                                border: 1px solid #ddd; border-top: none; 
-                            }
-                            .nginx-installation-guide ol { padding-left: 20px; }
-                            .sitemap-url-item { 
-                                padding: 10px; margin: 10px 0; border: 1px solid #ddd; 
-                                border-radius: 4px; background: #f9f9f9; 
-                            }
-                            .sitemap-url-item a { margin-right: 10px; }
-                        </style>
-                        <?php
+                                <style>
+                                    .nginx-rules-container { max-width: 1200px; }
+                                    .nginx-info-section, .nginx-generator-section, .nginx-rules-display, .sitemap-urls-section { 
+                                        background: white; padding: 20px; margin: 20px 0; border: 1px solid #ccd0d4; 
+                                    }
+                                    .nginx-benefits ul { padding-left: 20px; }
+                                    .nginx-rules-output { position: relative; }
+                                    .rules-header { 
+                                        display: flex; justify-content: space-between; align-items: center; 
+                                        padding: 10px; background: #f1f3f4; border: 1px solid #ddd; 
+                                    }
+                                    .rules-header span { font-weight: bold; }
+                                    .copy-rules-btn, .copy-url-btn { 
+                                        background: #0073aa; color: white; border: none; padding: 5px 10px; 
+                                        cursor: pointer; border-radius: 3px; 
+                                    }
+                                    #nginx-rules-text { 
+                                        margin: 0; padding: 15px; background: #2d3748; color: #e2e8f0; 
+                                        overflow-x: auto; font-family: 'Courier New', monospace; font-size: 13px; 
+                                        border: 1px solid #ddd; border-top: none; 
+                                    }
+                                    .nginx-installation-guide ol { padding-left: 20px; }
+                                    .sitemap-url-item { 
+                                        padding: 10px; margin: 10px 0; border: 1px solid #ddd; 
+                                        border-radius: 4px; background: #f9f9f9; 
+                                    }
+                                    .sitemap-url-item a { margin-right: 10px; }
+                                </style>
+                                <?php
     }
 
     /**
@@ -514,60 +514,60 @@ class Softworld_AI_SEO_Multisite_Network_Manager
         $license_info = $this->get_network_license_info();
 
         ?>
-                        <div class="wrap softworld-network-wrap">
-                            <h1><?php _e('Network License Management', 'softworld-ai-seo'); ?></h1>
+                                <div class="wrap softworld-network-wrap">
+                                    <h1><?php _e('Network License Management', 'softworld-ai-seo'); ?></h1>
             
-                            <form id="softworld-network-license-form" class="softworld-license-form">
-                                <?php wp_nonce_field('softworld_network_license', 'license_nonce'); ?>
+                                    <form id="softworld-network-license-form" class="softworld-license-form">
+                                        <?php wp_nonce_field('softworld_network_license', 'license_nonce'); ?>
                 
-                                <table class="form-table">
-                                    <tr>
-                                        <th scope="row"><?php _e('License Key', 'softworld-ai-seo'); ?></th>
-                                        <td>
-                                            <input type="text" 
-                                                   id="license_key" 
-                                                   name="license_key" 
-                                                   value="<?php echo esc_attr($license_info['key']); ?>" 
-                                                   class="regular-text" 
-                                                   <?php echo $license_info['valid'] ? 'readonly' : ''; ?>>
-                                            <p class="description">
-                                                <?php _e('Enter your Softworld AI SEO network license key.', 'softworld-ai-seo'); ?>
-                                            </p>
-                                        </td>
-                                    </tr>
-                    
-                                    <?php if ($license_info['valid']): ?>
+                                        <table class="form-table">
                                             <tr>
-                                                <th scope="row"><?php _e('License Status', 'softworld-ai-seo'); ?></th>
+                                                <th scope="row"><?php _e('License Key', 'softworld-ai-seo'); ?></th>
                                                 <td>
-                                                    <div class="license-status-display">
-                                                        <span class="license-valid">✅ <?php _e('Active', 'softworld-ai-seo'); ?></span>
-                                                        <p><strong><?php _e('Licensed to:', 'softworld-ai-seo'); ?></strong> <?php echo esc_html($license_info['customer_name']); ?></p>
-                                                        <p><strong><?php _e('Expires:', 'softworld-ai-seo'); ?></strong> <?php echo esc_html($license_info['expires']); ?></p>
-                                                        <p><strong><?php _e('Sites Allowed:', 'softworld-ai-seo'); ?></strong> <?php echo esc_html($license_info['site_limit']); ?></p>
-                                                        <p><strong><?php _e('Sites Used:', 'softworld-ai-seo'); ?></strong> <?php echo esc_html($license_info['sites_used']); ?></p>
-                                                    </div>
+                                                    <input type="text" 
+                                                           id="license_key" 
+                                                           name="license_key" 
+                                                           value="<?php echo esc_attr($license_info['key']); ?>" 
+                                                           class="regular-text" 
+                                                           <?php echo $license_info['valid'] ? 'readonly' : ''; ?>>
+                                                    <p class="description">
+                                                        <?php _e('Enter your Softworld AI SEO network license key.', 'softworld-ai-seo'); ?>
+                                                    </p>
                                                 </td>
                                             </tr>
-                                    <?php endif; ?>
-                                </table>
+                    
+                                            <?php if ($license_info['valid']): ?>
+                                                        <tr>
+                                                            <th scope="row"><?php _e('License Status', 'softworld-ai-seo'); ?></th>
+                                                            <td>
+                                                                <div class="license-status-display">
+                                                                    <span class="license-valid">✅ <?php _e('Active', 'softworld-ai-seo'); ?></span>
+                                                                    <p><strong><?php _e('Licensed to:', 'softworld-ai-seo'); ?></strong> <?php echo esc_html($license_info['customer_name']); ?></p>
+                                                                    <p><strong><?php _e('Expires:', 'softworld-ai-seo'); ?></strong> <?php echo esc_html($license_info['expires']); ?></p>
+                                                                    <p><strong><?php _e('Sites Allowed:', 'softworld-ai-seo'); ?></strong> <?php echo esc_html($license_info['site_limit']); ?></p>
+                                                                    <p><strong><?php _e('Sites Used:', 'softworld-ai-seo'); ?></strong> <?php echo esc_html($license_info['sites_used']); ?></p>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                            <?php endif; ?>
+                                        </table>
                 
-                                <p class="submit">
-                                    <?php if ($license_info['valid']): ?>
-                                                <button type="button" id="deactivate-license" class="button button-secondary">
-                                                    <?php _e('Deactivate License', 'softworld-ai-seo'); ?>
-                                                </button>
-                                    <?php else: ?>
-                                                <button type="button" id="activate-license" class="button button-primary">
-                                                    <?php _e('Activate License', 'softworld-ai-seo'); ?>
-                                                </button>
-                                    <?php endif; ?>
-                                </p>
-                            </form>
+                                        <p class="submit">
+                                            <?php if ($license_info['valid']): ?>
+                                                            <button type="button" id="deactivate-license" class="button button-secondary">
+                                                                <?php _e('Deactivate License', 'softworld-ai-seo'); ?>
+                                                            </button>
+                                            <?php else: ?>
+                                                            <button type="button" id="activate-license" class="button button-primary">
+                                                                <?php _e('Activate License', 'softworld-ai-seo'); ?>
+                                                            </button>
+                                            <?php endif; ?>
+                                        </p>
+                                    </form>
             
-                            <div id="license-status-message" class="notice" style="display: none;"></div>
-                        </div>
-                        <?php
+                                    <div id="license-status-message" class="notice" style="display: none;"></div>
+                                </div>
+                                <?php
     }
 
     /**
@@ -583,234 +583,234 @@ class Softworld_AI_SEO_Multisite_Network_Manager
         $sites = $this->get_network_sites();
 
         ?>
-                        <div class="wrap softworld-network-wrap">
-                            <h1><?php _e('Network Robots.txt Manager', 'softworld-ai-seo'); ?></h1>
+                                <div class="wrap softworld-network-wrap">
+                                    <h1><?php _e('Network Robots.txt Manager', 'softworld-ai-seo'); ?></h1>
             
-                            <div class="robots-txt-container">
-                                <div class="robots-info-section">
-                                    <h2><?php _e('About Network Robots.txt', 'softworld-ai-seo'); ?></h2>
-                                    <p><?php _e('Manage robots.txt files across your entire multisite network. You can set a default network robots.txt that applies to all sites, or allow individual sites to have custom robots.txt files.', 'softworld-ai-seo'); ?></p>
+                                    <div class="robots-txt-container">
+                                        <div class="robots-info-section">
+                                            <h2><?php _e('About Network Robots.txt', 'softworld-ai-seo'); ?></h2>
+                                            <p><?php _e('Manage robots.txt files across your entire multisite network. You can set a default network robots.txt that applies to all sites, or allow individual sites to have custom robots.txt files.', 'softworld-ai-seo'); ?></p>
                     
-                                    <div class="robots-benefits">
-                                        <h3><?php _e('Features:', 'softworld-ai-seo'); ?></h3>
-                                        <ul>
-                                            <li><?php _e('Centralized robots.txt management', 'softworld-ai-seo'); ?></li>
-                                            <li><?php _e('Automatic sitemap inclusion', 'softworld-ai-seo'); ?></li>
-                                            <li><?php _e('Per-site customization options', 'softworld-ai-seo'); ?></li>
-                                            <li><?php _e('SEO-friendly default rules', 'softworld-ai-seo'); ?></li>
-                                        </ul>
-                                    </div>
-                                </div>
+                                            <div class="robots-benefits">
+                                                <h3><?php _e('Features:', 'softworld-ai-seo'); ?></h3>
+                                                <ul>
+                                                    <li><?php _e('Centralized robots.txt management', 'softworld-ai-seo'); ?></li>
+                                                    <li><?php _e('Automatic sitemap inclusion', 'softworld-ai-seo'); ?></li>
+                                                    <li><?php _e('Per-site customization options', 'softworld-ai-seo'); ?></li>
+                                                    <li><?php _e('SEO-friendly default rules', 'softworld-ai-seo'); ?></li>
+                                                </ul>
+                                            </div>
+                                        </div>
 
-                                <div class="network-robots-editor">
-                                    <h2><?php _e('Default Network Robots.txt', 'softworld-ai-seo'); ?></h2>
-                                    <p><?php _e('This robots.txt content will be used for all sites that don\'t have custom overrides.', 'softworld-ai-seo'); ?></p>
+                                        <div class="network-robots-editor">
+                                            <h2><?php _e('Default Network Robots.txt', 'softworld-ai-seo'); ?></h2>
+                                            <p><?php _e('This robots.txt content will be used for all sites that don\'t have custom overrides.', 'softworld-ai-seo'); ?></p>
                     
-                                    <form id="network-robots-form">
-                                        <?php wp_nonce_field('softworld_network_robots', 'robots_nonce'); ?>
+                                            <form id="network-robots-form">
+                                                <?php wp_nonce_field('softworld_network_robots', 'robots_nonce'); ?>
                         
-                                        <table class="form-table">
-                                            <tr>
-                                                <th scope="row"><?php _e('Network Robots.txt Content', 'softworld-ai-seo'); ?></th>
-                                                <td>
-                                                    <textarea name="network_robots_content" id="network-robots-content" rows="15" class="large-text code"><?php echo esc_textarea($network_robots); ?></textarea>
-                                                    <p class="description">
-                                                        <?php _e('Use %%sitemap_url%% to automatically include the sitemap URL for each site.', 'softworld-ai-seo'); ?>
-                                                    </p>
-                                                </td>
-                                            </tr>
+                                                <table class="form-table">
+                                                    <tr>
+                                                        <th scope="row"><?php _e('Network Robots.txt Content', 'softworld-ai-seo'); ?></th>
+                                                        <td>
+                                                            <textarea name="network_robots_content" id="network-robots-content" rows="15" class="large-text code"><?php echo esc_textarea($network_robots); ?></textarea>
+                                                            <p class="description">
+                                                                <?php _e('Use %%sitemap_url%% to automatically include the sitemap URL for each site.', 'softworld-ai-seo'); ?>
+                                                            </p>
+                                                        </td>
+                                                    </tr>
                             
-                                            <tr>
-                                                <th scope="row"><?php _e('Application Options', 'softworld-ai-seo'); ?></th>
-                                                <td>
-                                                    <fieldset>
-                                                        <label>
-                                                            <input type="checkbox" name="auto_include_sitemaps" value="1" checked>
-                                                            <?php _e('Automatically include sitemap URLs', 'softworld-ai-seo'); ?>
-                                                        </label>
-                                                        <br>
-                                                        <label>
-                                                            <input type="checkbox" name="block_admin_areas" value="1" checked>
-                                                            <?php _e('Block admin and login areas', 'softworld-ai-seo'); ?>
-                                                        </label>
-                                                        <br>
-                                                        <label>
-                                                            <input type="checkbox" name="allow_site_overrides" value="1">
-                                                            <?php _e('Allow individual sites to override robots.txt', 'softworld-ai-seo'); ?>
-                                                        </label>
-                                                    </fieldset>
-                                                </td>
-                                            </tr>
-                                        </table>
+                                                    <tr>
+                                                        <th scope="row"><?php _e('Application Options', 'softworld-ai-seo'); ?></th>
+                                                        <td>
+                                                            <fieldset>
+                                                                <label>
+                                                                    <input type="checkbox" name="auto_include_sitemaps" value="1" checked>
+                                                                    <?php _e('Automatically include sitemap URLs', 'softworld-ai-seo'); ?>
+                                                                </label>
+                                                                <br>
+                                                                <label>
+                                                                    <input type="checkbox" name="block_admin_areas" value="1" checked>
+                                                                    <?php _e('Block admin and login areas', 'softworld-ai-seo'); ?>
+                                                                </label>
+                                                                <br>
+                                                                <label>
+                                                                    <input type="checkbox" name="allow_site_overrides" value="1">
+                                                                    <?php _e('Allow individual sites to override robots.txt', 'softworld-ai-seo'); ?>
+                                                                </label>
+                                                            </fieldset>
+                                                        </td>
+                                                    </tr>
+                                                </table>
                         
-                                        <p class="submit">
-                                            <button type="submit" class="button button-primary">
-                                                <?php _e('Save Network Robots.txt', 'softworld-ai-seo'); ?>
-                                            </button>
-                                            <button type="button" id="apply-robots-to-all" class="button button-secondary">
-                                                <?php _e('Apply to All Sites', 'softworld-ai-seo'); ?>
-                                            </button>
-                                            <button type="button" id="preview-robots" class="button button-secondary">
-                                                <?php _e('Preview', 'softworld-ai-seo'); ?>
-                                            </button>
-                                        </p>
-                                    </form>
-                                </div>
+                                                <p class="submit">
+                                                    <button type="submit" class="button button-primary">
+                                                        <?php _e('Save Network Robots.txt', 'softworld-ai-seo'); ?>
+                                                    </button>
+                                                    <button type="button" id="apply-robots-to-all" class="button button-secondary">
+                                                        <?php _e('Apply to All Sites', 'softworld-ai-seo'); ?>
+                                                    </button>
+                                                    <button type="button" id="preview-robots" class="button button-secondary">
+                                                        <?php _e('Preview', 'softworld-ai-seo'); ?>
+                                                    </button>
+                                                </p>
+                                            </form>
+                                        </div>
 
-                                <!-- Robots.txt Templates -->
-                                <div class="robots-templates-section">
-                                    <h2><?php _e('Robots.txt Templates', 'softworld-ai-seo'); ?></h2>
-                                    <p><?php _e('Quick-start templates for common scenarios:', 'softworld-ai-seo'); ?></p>
+                                        <!-- Robots.txt Templates -->
+                                        <div class="robots-templates-section">
+                                            <h2><?php _e('Robots.txt Templates', 'softworld-ai-seo'); ?></h2>
+                                            <p><?php _e('Quick-start templates for common scenarios:', 'softworld-ai-seo'); ?></p>
                     
-                                    <div class="template-buttons">
-                                        <button type="button" class="load-template" data-template="standard">
-                                            <?php _e('Standard Template', 'softworld-ai-seo'); ?>
-                                        </button>
-                                        <button type="button" class="load-template" data-template="strict">
-                                            <?php _e('Strict Template', 'softworld-ai-seo'); ?>
-                                        </button>
-                                        <button type="button" class="load-template" data-template="permissive">
-                                            <?php _e('Permissive Template', 'softworld-ai-seo'); ?>
-                                        </button>
-                                        <button type="button" class="load-template" data-template="ecommerce">
-                                            <?php _e('E-commerce Template', 'softworld-ai-seo'); ?>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <!-- Site-specific Robots.txt Status -->
-                                <div class="site-robots-status">
-                                    <h2><?php _e('Site-specific Robots.txt Status', 'softworld-ai-seo'); ?></h2>
-                                    <table class="wp-list-table widefat fixed striped">
-                                        <thead>
-                                            <tr>
-                                                <th><?php _e('Site', 'softworld-ai-seo'); ?></th>
-                                                <th><?php _e('Robots.txt Source', 'softworld-ai-seo'); ?></th>
-                                                <th><?php _e('Last Modified', 'softworld-ai-seo'); ?></th>
-                                                <th><?php _e('Actions', 'softworld-ai-seo'); ?></th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php foreach ($sites as $site): ?>
-                                                        <tr>
-                                                            <td>
-                                                                <strong><?php echo esc_html($site['name']); ?></strong>
-                                                                <br><small><?php echo esc_url($site['url']); ?></small>
-                                                            </td>
-                                                            <td>
-                                                                <?php if ($site['custom_robots']): ?>
-                                                                            <span class="custom-robots"><?php _e('Custom Override', 'softworld-ai-seo'); ?></span>
-                                                                <?php else: ?>
-                                                                            <span class="network-robots"><?php _e('Network Default', 'softworld-ai-seo'); ?></span>
-                                                                <?php endif; ?>
-                                                            </td>
-                                                            <td><?php echo $site['robots_modified'] ? date('Y-m-d H:i', strtotime($site['robots_modified'])) : __('Never', 'softworld-ai-seo'); ?></td>
-                                                            <td>
-                                                                <a href="<?php echo esc_url($site['robots_url']); ?>" target="_blank" class="button button-small">
-                                                                    <?php _e('View', 'softworld-ai-seo'); ?>
-                                                                </a>
-                                                                <?php if ($site['custom_robots']): ?>
-                                                                            <button type="button" class="reset-to-network button button-small" data-site-id="<?php echo $site['id']; ?>">
-                                                                                <?php _e('Reset to Network', 'softworld-ai-seo'); ?>
-                                                                            </button>
-                                                                <?php endif; ?>
-                                                            </td>
-                                                        </tr>
-                                            <?php endforeach; ?>
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                <!-- Robots.txt Preview Modal -->
-                                <div id="robots-preview-modal" class="robots-modal" style="display: none;">
-                                    <div class="robots-modal-content">
-                                        <div class="robots-modal-header">
-                                            <h3><?php _e('Robots.txt Preview', 'softworld-ai-seo'); ?></h3>
-                                            <button type="button" class="robots-modal-close">&times;</button>
-                                        </div>
-                                        <div class="robots-modal-body">
-                                            <div class="preview-tabs">
-                                                <button type="button" class="preview-tab active" data-site="main">
-                                                    <?php _e('Main Site', 'softworld-ai-seo'); ?>
+                                            <div class="template-buttons">
+                                                <button type="button" class="load-template" data-template="standard">
+                                                    <?php _e('Standard Template', 'softworld-ai-seo'); ?>
                                                 </button>
-                                                <?php foreach (array_slice($sites, 1, 3) as $site): ?>
-                                                            <button type="button" class="preview-tab" data-site="<?php echo $site['id']; ?>">
-                                                                <?php echo esc_html($site['name']); ?>
-                                                            </button>
-                                                <?php endforeach; ?>
-                                            </div>
-                                            <div class="preview-content">
-                                                <pre id="robots-preview-text"></pre>
+                                                <button type="button" class="load-template" data-template="strict">
+                                                    <?php _e('Strict Template', 'softworld-ai-seo'); ?>
+                                                </button>
+                                                <button type="button" class="load-template" data-template="permissive">
+                                                    <?php _e('Permissive Template', 'softworld-ai-seo'); ?>
+                                                </button>
+                                                <button type="button" class="load-template" data-template="ecommerce">
+                                                    <?php _e('E-commerce Template', 'softworld-ai-seo'); ?>
+                                                </button>
                                             </div>
                                         </div>
-                                        <div class="robots-modal-footer">
-                                            <button type="button" class="button robots-modal-close">
-                                                <?php _e('Close', 'softworld-ai-seo'); ?>
-                                            </button>
+
+                                        <!-- Site-specific Robots.txt Status -->
+                                        <div class="site-robots-status">
+                                            <h2><?php _e('Site-specific Robots.txt Status', 'softworld-ai-seo'); ?></h2>
+                                            <table class="wp-list-table widefat fixed striped">
+                                                <thead>
+                                                    <tr>
+                                                        <th><?php _e('Site', 'softworld-ai-seo'); ?></th>
+                                                        <th><?php _e('Robots.txt Source', 'softworld-ai-seo'); ?></th>
+                                                        <th><?php _e('Last Modified', 'softworld-ai-seo'); ?></th>
+                                                        <th><?php _e('Actions', 'softworld-ai-seo'); ?></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?php foreach ($sites as $site): ?>
+                                                                    <tr>
+                                                                        <td>
+                                                                            <strong><?php echo esc_html($site['name']); ?></strong>
+                                                                            <br><small><?php echo esc_url($site['url']); ?></small>
+                                                                        </td>
+                                                                        <td>
+                                                                            <?php if ($site['custom_robots']): ?>
+                                                                                            <span class="custom-robots"><?php _e('Custom Override', 'softworld-ai-seo'); ?></span>
+                                                                            <?php else: ?>
+                                                                                            <span class="network-robots"><?php _e('Network Default', 'softworld-ai-seo'); ?></span>
+                                                                            <?php endif; ?>
+                                                                        </td>
+                                                                        <td><?php echo $site['robots_modified'] ? date('Y-m-d H:i', strtotime($site['robots_modified'])) : __('Never', 'softworld-ai-seo'); ?></td>
+                                                                        <td>
+                                                                            <a href="<?php echo esc_url($site['robots_url']); ?>" target="_blank" class="button button-small">
+                                                                                <?php _e('View', 'softworld-ai-seo'); ?>
+                                                                            </a>
+                                                                            <?php if ($site['custom_robots']): ?>
+                                                                                            <button type="button" class="reset-to-network button button-small" data-site-id="<?php echo $site['id']; ?>">
+                                                                                                <?php _e('Reset to Network', 'softworld-ai-seo'); ?>
+                                                                                            </button>
+                                                                            <?php endif; ?>
+                                                                        </td>
+                                                                    </tr>
+                                                    <?php endforeach; ?>
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        <!-- Robots.txt Preview Modal -->
+                                        <div id="robots-preview-modal" class="robots-modal" style="display: none;">
+                                            <div class="robots-modal-content">
+                                                <div class="robots-modal-header">
+                                                    <h3><?php _e('Robots.txt Preview', 'softworld-ai-seo'); ?></h3>
+                                                    <button type="button" class="robots-modal-close">&times;</button>
+                                                </div>
+                                                <div class="robots-modal-body">
+                                                    <div class="preview-tabs">
+                                                        <button type="button" class="preview-tab active" data-site="main">
+                                                            <?php _e('Main Site', 'softworld-ai-seo'); ?>
+                                                        </button>
+                                                        <?php foreach (array_slice($sites, 1, 3) as $site): ?>
+                                                                        <button type="button" class="preview-tab" data-site="<?php echo $site['id']; ?>">
+                                                                            <?php echo esc_html($site['name']); ?>
+                                                                        </button>
+                                                        <?php endforeach; ?>
+                                                    </div>
+                                                    <div class="preview-content">
+                                                        <pre id="robots-preview-text"></pre>
+                                                    </div>
+                                                </div>
+                                                <div class="robots-modal-footer">
+                                                    <button type="button" class="button robots-modal-close">
+                                                        <?php _e('Close', 'softworld-ai-seo'); ?>
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
         
-                        <style>
-                            .robots-txt-container { max-width: 1200px; }
-                            .robots-info-section, .network-robots-editor, .robots-templates-section, .site-robots-status { 
-                                background: white; padding: 20px; margin: 20px 0; border: 1px solid #ccd0d4; 
-                            }
-                            .robots-benefits ul { padding-left: 20px; }
-                            #network-robots-content { 
-                                font-family: 'Courier New', monospace; font-size: 13px; 
-                                background: #f9f9f9; border: 1px solid #ddd; 
-                            }
-                            .template-buttons { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px; }
-                            .load-template { 
-                                padding: 8px 15px; background: #f0f0f1; border: 1px solid #c3c4c7; 
-                                cursor: pointer; border-radius: 3px; 
-                            }
-                            .load-template:hover { background: #e9e9ea; }
-                            .custom-robots { color: #dba617; font-weight: bold; }
-                            .network-robots { color: #2271b1; }
-                            .reset-to-network { margin-left: 5px; }
+                                <style>
+                                    .robots-txt-container { max-width: 1200px; }
+                                    .robots-info-section, .network-robots-editor, .robots-templates-section, .site-robots-status { 
+                                        background: white; padding: 20px; margin: 20px 0; border: 1px solid #ccd0d4; 
+                                    }
+                                    .robots-benefits ul { padding-left: 20px; }
+                                    #network-robots-content { 
+                                        font-family: 'Courier New', monospace; font-size: 13px; 
+                                        background: #f9f9f9; border: 1px solid #ddd; 
+                                    }
+                                    .template-buttons { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px; }
+                                    .load-template { 
+                                        padding: 8px 15px; background: #f0f0f1; border: 1px solid #c3c4c7; 
+                                        cursor: pointer; border-radius: 3px; 
+                                    }
+                                    .load-template:hover { background: #e9e9ea; }
+                                    .custom-robots { color: #dba617; font-weight: bold; }
+                                    .network-robots { color: #2271b1; }
+                                    .reset-to-network { margin-left: 5px; }
             
-                            /* Modal styles */
-                            .robots-modal { 
-                                position: fixed; z-index: 100000; left: 0; top: 0; 
-                                width: 100%; height: 100%; background: rgba(0,0,0,0.5); 
-                            }
-                            .robots-modal-content { 
-                                background: white; margin: 5% auto; padding: 0; width: 80%; 
-                                max-width: 800px; border-radius: 4px; 
-                            }
-                            .robots-modal-header { 
-                                padding: 20px; border-bottom: 1px solid #ddd; 
-                                display: flex; justify-content: space-between; align-items: center; 
-                            }
-                            .robots-modal-close { 
-                                background: none; border: none; font-size: 24px; 
-                                cursor: pointer; color: #666; 
-                            }
-                            .robots-modal-body { padding: 20px; }
-                            .robots-modal-footer { 
-                                padding: 15px 20px; border-top: 1px solid #ddd; 
-                                text-align: right; 
-                            }
-                            .preview-tabs { 
-                                display: flex; gap: 5px; margin-bottom: 15px; 
-                                border-bottom: 1px solid #ddd; 
-                            }
-                            .preview-tab { 
-                                padding: 8px 15px; background: #f0f0f1; border: 1px solid #c3c4c7; 
-                                border-bottom: none; cursor: pointer; 
-                            }
-                            .preview-tab.active { background: white; border-bottom: 1px solid white; margin-bottom: -1px; }
-                            .preview-content { min-height: 300px; }
-                            #robots-preview-text { 
-                                background: #f9f9f9; padding: 15px; border: 1px solid #ddd; 
-                                font-family: 'Courier New', monospace; font-size: 13px; 
-                            }
-                        </style>
-                        <?php
+                                    /* Modal styles */
+                                    .robots-modal { 
+                                        position: fixed; z-index: 100000; left: 0; top: 0; 
+                                        width: 100%; height: 100%; background: rgba(0,0,0,0.5); 
+                                    }
+                                    .robots-modal-content { 
+                                        background: white; margin: 5% auto; padding: 0; width: 80%; 
+                                        max-width: 800px; border-radius: 4px; 
+                                    }
+                                    .robots-modal-header { 
+                                        padding: 20px; border-bottom: 1px solid #ddd; 
+                                        display: flex; justify-content: space-between; align-items: center; 
+                                    }
+                                    .robots-modal-close { 
+                                        background: none; border: none; font-size: 24px; 
+                                        cursor: pointer; color: #666; 
+                                    }
+                                    .robots-modal-body { padding: 20px; }
+                                    .robots-modal-footer { 
+                                        padding: 15px 20px; border-top: 1px solid #ddd; 
+                                        text-align: right; 
+                                    }
+                                    .preview-tabs { 
+                                        display: flex; gap: 5px; margin-bottom: 15px; 
+                                        border-bottom: 1px solid #ddd; 
+                                    }
+                                    .preview-tab { 
+                                        padding: 8px 15px; background: #f0f0f1; border: 1px solid #c3c4c7; 
+                                        border-bottom: none; cursor: pointer; 
+                                    }
+                                    .preview-tab.active { background: white; border-bottom: 1px solid white; margin-bottom: -1px; }
+                                    .preview-content { min-height: 300px; }
+                                    #robots-preview-text { 
+                                        background: #f9f9f9; padding: 15px; border: 1px solid #ddd; 
+                                        font-family: 'Courier New', monospace; font-size: 13px; 
+                                    }
+                                </style>
+                                <?php
     }
 
     /**
@@ -826,81 +826,81 @@ class Softworld_AI_SEO_Multisite_Network_Manager
         $available_settings = $this->get_available_settings();
 
         ?>
-                        <div class="wrap softworld-network-wrap">
-                            <h1><?php _e('Network Settings', 'softworld-ai-seo'); ?></h1>
+                                <div class="wrap softworld-network-wrap">
+                                    <h1><?php _e('Network Settings', 'softworld-ai-seo'); ?></h1>
             
-                            <form id="softworld-network-settings-form">
-                                <?php wp_nonce_field('softworld_network_settings', 'settings_nonce'); ?>
+                                    <form id="softworld-network-settings-form">
+                                        <?php wp_nonce_field('softworld_network_settings', 'settings_nonce'); ?>
                 
-                                <!-- Settings Inheritance -->
-                                <div class="softworld-settings-section">
-                                    <h2><?php _e('Settings Inheritance', 'softworld-ai-seo'); ?></h2>
-                                    <table class="form-table">
-                                        <tr>
-                                            <th scope="row"><?php _e('Allow Site Overrides', 'softworld-ai-seo'); ?></th>
-                                            <td>
-                                                <label>
-                                                    <input type="checkbox" name="allow_site_overrides" value="1" 
-                                                           <?php checked($network_settings['allow_site_overrides'], 1); ?>>
-                                                    <?php _e('Allow individual sites to override network settings', 'softworld-ai-seo'); ?>
-                                                </label>
-                                                <p class="description">
-                                                    <?php _e('When enabled, site administrators can request permission to use custom settings.', 'softworld-ai-seo'); ?>
-                                                </p>
-                                            </td>
-                                        </tr>
+                                        <!-- Settings Inheritance -->
+                                        <div class="softworld-settings-section">
+                                            <h2><?php _e('Settings Inheritance', 'softworld-ai-seo'); ?></h2>
+                                            <table class="form-table">
+                                                <tr>
+                                                    <th scope="row"><?php _e('Allow Site Overrides', 'softworld-ai-seo'); ?></th>
+                                                    <td>
+                                                        <label>
+                                                            <input type="checkbox" name="allow_site_overrides" value="1" 
+                                                                   <?php checked($network_settings['allow_site_overrides'], 1); ?>>
+                                                            <?php _e('Allow individual sites to override network settings', 'softworld-ai-seo'); ?>
+                                                        </label>
+                                                        <p class="description">
+                                                            <?php _e('When enabled, site administrators can request permission to use custom settings.', 'softworld-ai-seo'); ?>
+                                                        </p>
+                                                    </td>
+                                                </tr>
                         
-                                        <tr>
-                                            <th scope="row"><?php _e('Auto-approve Override Requests', 'softworld-ai-seo'); ?></th>
-                                            <td>
-                                                <label>
-                                                    <input type="checkbox" name="auto_approve_overrides" value="1" 
-                                                           <?php checked($network_settings['auto_approve_overrides'], 1); ?>>
-                                                    <?php _e('Automatically approve override requests', 'softworld-ai-seo'); ?>
-                                                </label>
-                                            </td>
-                                        </tr>
-                                    </table>
-                                </div>
+                                                <tr>
+                                                    <th scope="row"><?php _e('Auto-approve Override Requests', 'softworld-ai-seo'); ?></th>
+                                                    <td>
+                                                        <label>
+                                                            <input type="checkbox" name="auto_approve_overrides" value="1" 
+                                                                   <?php checked($network_settings['auto_approve_overrides'], 1); ?>>
+                                                            <?php _e('Automatically approve override requests', 'softworld-ai-seo'); ?>
+                                                        </label>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </div>
 
-                                <!-- Default Network Settings -->
-                                <div class="softworld-settings-section">
-                                    <h2><?php _e('Default Network Settings', 'softworld-ai-seo'); ?></h2>
-                                    <p class="description">
-                                        <?php _e('These settings will be inherited by all sites in the network (unless overridden).', 'softworld-ai-seo'); ?>
-                                    </p>
+                                        <!-- Default Network Settings -->
+                                        <div class="softworld-settings-section">
+                                            <h2><?php _e('Default Network Settings', 'softworld-ai-seo'); ?></h2>
+                                            <p class="description">
+                                                <?php _e('These settings will be inherited by all sites in the network (unless overridden).', 'softworld-ai-seo'); ?>
+                                            </p>
                     
-                                    <?php foreach ($available_settings as $section_key => $section): ?>
-                                                <div class="settings-group">
-                                                    <h3><?php echo esc_html($section['title']); ?></h3>
-                                                    <table class="form-table">
-                                                        <?php foreach ($section['settings'] as $setting_key => $setting): ?>
-                                                                    <tr>
-                                                                        <th scope="row"><?php echo esc_html($setting['label']); ?></th>
-                                                                        <td>
-                                                                            <?php $this->render_setting_field($setting_key, $setting, $network_settings); ?>
-                                                                            <?php if (!empty($setting['description'])): ?>
-                                                                                        <p class="description"><?php echo esc_html($setting['description']); ?></p>
-                                                                            <?php endif; ?>
-                                                                        </td>
-                                                                    </tr>
-                                                        <?php endforeach; ?>
-                                                    </table>
-                                                </div>
-                                    <?php endforeach; ?>
-                                </div>
+                                            <?php foreach ($available_settings as $section_key => $section): ?>
+                                                            <div class="settings-group">
+                                                                <h3><?php echo esc_html($section['title']); ?></h3>
+                                                                <table class="form-table">
+                                                                    <?php foreach ($section['settings'] as $setting_key => $setting): ?>
+                                                                                    <tr>
+                                                                                        <th scope="row"><?php echo esc_html($setting['label']); ?></th>
+                                                                                        <td>
+                                                                                            <?php $this->render_setting_field($setting_key, $setting, $network_settings); ?>
+                                                                                            <?php if (!empty($setting['description'])): ?>
+                                                                                                            <p class="description"><?php echo esc_html($setting['description']); ?></p>
+                                                                                            <?php endif; ?>
+                                                                                        </td>
+                                                                                    </tr>
+                                                                    <?php endforeach; ?>
+                                                                </table>
+                                                            </div>
+                                            <?php endforeach; ?>
+                                        </div>
 
-                                <p class="submit">
-                                    <button type="submit" class="button button-primary">
-                                        <?php _e('Save Network Settings', 'softworld-ai-seo'); ?>
-                                    </button>
-                                    <button type="button" id="apply-to-all-sites" class="button button-secondary">
-                                        <?php _e('Apply to All Sites', 'softworld-ai-seo'); ?>
-                                    </button>
-                                </p>
-                            </form>
-                        </div>
-                        <?php
+                                        <p class="submit">
+                                            <button type="submit" class="button button-primary">
+                                                <?php _e('Save Network Settings', 'softworld-ai-seo'); ?>
+                                            </button>
+                                            <button type="button" id="apply-to-all-sites" class="button button-secondary">
+                                                <?php _e('Apply to All Sites', 'softworld-ai-seo'); ?>
+                                            </button>
+                                        </p>
+                                    </form>
+                                </div>
+                                <?php
     }
     /** *
      *  * Render Setting Field
@@ -1021,85 +1021,85 @@ class Softworld_AI_SEO_Multisite_Network_Manager
         }
 
         ?>
-                        <div class="wrap softworld-network-wrap">
-                            <h1><?php _e('Import/Export Network Settings', 'softworld-ai-seo'); ?></h1>
+                                <div class="wrap softworld-network-wrap">
+                                    <h1><?php _e('Import/Export Network Settings', 'softworld-ai-seo'); ?></h1>
             
-                            <div class="softworld-import-export-container">
-                                <!-- Export Section -->
-                                <div class="softworld-export-section">
-                                    <h2><?php _e('Export Settings', 'softworld-ai-seo'); ?></h2>
-                                    <p><?php _e('Export your network settings to a JSON file for backup or migration.', 'softworld-ai-seo'); ?></p>
+                                    <div class="softworld-import-export-container">
+                                        <!-- Export Section -->
+                                        <div class="softworld-export-section">
+                                            <h2><?php _e('Export Settings', 'softworld-ai-seo'); ?></h2>
+                                            <p><?php _e('Export your network settings to a JSON file for backup or migration.', 'softworld-ai-seo'); ?></p>
                     
-                                    <form id="softworld-export-form">
-                                        <?php wp_nonce_field('softworld_network_export', 'export_nonce'); ?>
+                                            <form id="softworld-export-form">
+                                                <?php wp_nonce_field('softworld_network_export', 'export_nonce'); ?>
                         
-                                        <table class="form-table">
-                                            <tr>
-                                                <th scope="row"><?php _e('Export Options', 'softworld-ai-seo'); ?></th>
-                                                <td>
-                                                    <label><input type="checkbox" name="export_network_settings" value="1" checked> <?php _e('Network Settings', 'softworld-ai-seo'); ?></label><br>
-                                                    <label><input type="checkbox" name="export_site_settings" value="1"> <?php _e('All Site Settings', 'softworld-ai-seo'); ?></label><br>
-                                                    <label><input type="checkbox" name="export_license_info" value="1"> <?php _e('License Information', 'softworld-ai-seo'); ?></label><br>
-                                                    <label><input type="checkbox" name="export_override_permissions" value="1" checked> <?php _e('Override Permissions', 'softworld-ai-seo'); ?></label>
-                                                </td>
-                                            </tr>
-                                        </table>
+                                                <table class="form-table">
+                                                    <tr>
+                                                        <th scope="row"><?php _e('Export Options', 'softworld-ai-seo'); ?></th>
+                                                        <td>
+                                                            <label><input type="checkbox" name="export_network_settings" value="1" checked> <?php _e('Network Settings', 'softworld-ai-seo'); ?></label><br>
+                                                            <label><input type="checkbox" name="export_site_settings" value="1"> <?php _e('All Site Settings', 'softworld-ai-seo'); ?></label><br>
+                                                            <label><input type="checkbox" name="export_license_info" value="1"> <?php _e('License Information', 'softworld-ai-seo'); ?></label><br>
+                                                            <label><input type="checkbox" name="export_override_permissions" value="1" checked> <?php _e('Override Permissions', 'softworld-ai-seo'); ?></label>
+                                                        </td>
+                                                    </tr>
+                                                </table>
                         
-                                        <p class="submit">
-                                            <button type="submit" class="button button-primary">
-                                                <?php _e('Export Settings', 'softworld-ai-seo'); ?>
-                                            </button>
-                                        </p>
-                                    </form>
-                                </div>
+                                                <p class="submit">
+                                                    <button type="submit" class="button button-primary">
+                                                        <?php _e('Export Settings', 'softworld-ai-seo'); ?>
+                                                    </button>
+                                                </p>
+                                            </form>
+                                        </div>
 
-                                <!-- Import Section -->
-                                <div class="softworld-import-section">
-                                    <h2><?php _e('Import Settings', 'softworld-ai-seo'); ?></h2>
-                                    <p><?php _e('Import settings from a previously exported JSON file.', 'softworld-ai-seo'); ?></p>
+                                        <!-- Import Section -->
+                                        <div class="softworld-import-section">
+                                            <h2><?php _e('Import Settings', 'softworld-ai-seo'); ?></h2>
+                                            <p><?php _e('Import settings from a previously exported JSON file.', 'softworld-ai-seo'); ?></p>
                     
-                                    <form id="softworld-import-form" enctype="multipart/form-data">
-                                        <?php wp_nonce_field('softworld_network_import', 'import_nonce'); ?>
+                                            <form id="softworld-import-form" enctype="multipart/form-data">
+                                                <?php wp_nonce_field('softworld_network_import', 'import_nonce'); ?>
                         
-                                        <table class="form-table">
-                                            <tr>
-                                                <th scope="row"><?php _e('Settings File', 'softworld-ai-seo'); ?></th>
-                                                <td>
-                                                    <input type="file" name="import_file" accept=".json" required>
-                                                    <p class="description">
-                                                        <?php _e('Select a JSON file exported from Softworld AI SEO.', 'softworld-ai-seo'); ?>
-                                                    </p>
-                                                </td>
-                                            </tr>
+                                                <table class="form-table">
+                                                    <tr>
+                                                        <th scope="row"><?php _e('Settings File', 'softworld-ai-seo'); ?></th>
+                                                        <td>
+                                                            <input type="file" name="import_file" accept=".json" required>
+                                                            <p class="description">
+                                                                <?php _e('Select a JSON file exported from Softworld AI SEO.', 'softworld-ai-seo'); ?>
+                                                            </p>
+                                                        </td>
+                                                    </tr>
                             
-                                            <tr>
-                                                <th scope="row"><?php _e('Import Options', 'softworld-ai-seo'); ?></th>
-                                                <td>
-                                                    <label><input type="checkbox" name="overwrite_existing" value="1"> <?php _e('Overwrite Existing Settings', 'softworld-ai-seo'); ?></label><br>
-                                                    <label><input type="checkbox" name="apply_to_sites" value="1"> <?php _e('Apply to All Sites', 'softworld-ai-seo'); ?></label><br>
-                                                    <label><input type="checkbox" name="backup_before_import" value="1" checked> <?php _e('Create Backup Before Import', 'softworld-ai-seo'); ?></label>
-                                                </td>
-                                            </tr>
-                                        </table>
+                                                    <tr>
+                                                        <th scope="row"><?php _e('Import Options', 'softworld-ai-seo'); ?></th>
+                                                        <td>
+                                                            <label><input type="checkbox" name="overwrite_existing" value="1"> <?php _e('Overwrite Existing Settings', 'softworld-ai-seo'); ?></label><br>
+                                                            <label><input type="checkbox" name="apply_to_sites" value="1"> <?php _e('Apply to All Sites', 'softworld-ai-seo'); ?></label><br>
+                                                            <label><input type="checkbox" name="backup_before_import" value="1" checked> <?php _e('Create Backup Before Import', 'softworld-ai-seo'); ?></label>
+                                                        </td>
+                                                    </tr>
+                                                </table>
                         
-                                        <p class="submit">
-                                            <button type="submit" class="button button-primary">
-                                                <?php _e('Import Settings', 'softworld-ai-seo'); ?>
-                                            </button>
-                                        </p>
-                                    </form>
-                                </div>
-                            </div>
+                                                <p class="submit">
+                                                    <button type="submit" class="button button-primary">
+                                                        <?php _e('Import Settings', 'softworld-ai-seo'); ?>
+                                                    </button>
+                                                </p>
+                                            </form>
+                                        </div>
+                                    </div>
             
-                            <!-- Import/Export Log -->
-                            <div class="softworld-import-export-log">
-                                <h2><?php _e('Recent Activity', 'softworld-ai-seo'); ?></h2>
-                                <div id="import-export-log">
-                                    <?php $this->render_import_export_log(); ?>
+                                    <!-- Import/Export Log -->
+                                    <div class="softworld-import-export-log">
+                                        <h2><?php _e('Recent Activity', 'softworld-ai-seo'); ?></h2>
+                                        <div id="import-export-log">
+                                            <?php $this->render_import_export_log(); ?>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                        <?php
+                                <?php
     }
 
     /**
@@ -1584,67 +1584,67 @@ class Softworld_AI_SEO_Multisite_Network_Manager
         $network_settings = $this->get_network_settings();
 
         ?>
-                <div class="wrap">
-                    <h1><?php _e('Network Settings Override', 'softworld-ai-seo'); ?></h1>
+                        <div class="wrap">
+                            <h1><?php _e('Network Settings Override', 'softworld-ai-seo'); ?></h1>
             
-                    <?php if ($override_approved): ?>
-                            <div class="notice notice-success">
-                                <p><?php _e('Your override request has been approved. You can now configure custom settings for this site.', 'softworld-ai-seo'); ?></p>
-                            </div>
+                            <?php if ($override_approved): ?>
+                                        <div class="notice notice-success">
+                                            <p><?php _e('Your override request has been approved. You can now configure custom settings for this site.', 'softworld-ai-seo'); ?></p>
+                                        </div>
                 
-                            <p>
-                                <a href="<?php echo admin_url('admin.php?page=softworld-ai-seo'); ?>" class="button button-primary">
-                                    <?php _e('Configure Settings', 'softworld-ai-seo'); ?>
-                                </a>
-                                <button type="button" id="revoke-override" class="button button-secondary">
-                                    <?php _e('Revert to Network Settings', 'softworld-ai-seo'); ?>
-                                </button>
-                            </p>
+                                        <p>
+                                            <a href="<?php echo admin_url('admin.php?page=softworld-ai-seo'); ?>" class="button button-primary">
+                                                <?php _e('Configure Settings', 'softworld-ai-seo'); ?>
+                                            </a>
+                                            <button type="button" id="revoke-override" class="button button-secondary">
+                                                <?php _e('Revert to Network Settings', 'softworld-ai-seo'); ?>
+                                            </button>
+                                        </p>
                 
-                    <?php elseif ($override_requested): ?>
-                            <div class="notice notice-info">
-                                <p><?php _e('Your override request is pending approval from the network administrator.', 'softworld-ai-seo'); ?></p>
-                            </div>
+                            <?php elseif ($override_requested): ?>
+                                        <div class="notice notice-info">
+                                            <p><?php _e('Your override request is pending approval from the network administrator.', 'softworld-ai-seo'); ?></p>
+                                        </div>
                 
-                    <?php else: ?>
-                            <div class="notice notice-info">
-                                <p><?php _e('This site currently inherits settings from the network administrator.', 'softworld-ai-seo'); ?></p>
-                            </div>
+                            <?php else: ?>
+                                        <div class="notice notice-info">
+                                            <p><?php _e('This site currently inherits settings from the network administrator.', 'softworld-ai-seo'); ?></p>
+                                        </div>
                 
-                            <form id="override-request-form">
-                                <?php wp_nonce_field('softworld_site_override', 'override_nonce'); ?>
+                                        <form id="override-request-form">
+                                            <?php wp_nonce_field('softworld_site_override', 'override_nonce'); ?>
                     
-                                <table class="form-table">
-                                    <tr>
-                                        <th scope="row"><?php _e('Request Override', 'softworld-ai-seo'); ?></th>
-                                        <td>
-                                            <label>
-                                                <input type="checkbox" name="request_override" value="1">
-                                                <?php _e('I want to use custom SEO settings for this site', 'softworld-ai-seo'); ?>
-                                            </label>
-                                            <p class="description">
-                                                <?php _e('This will send a request to the network administrator for permission to override network settings.', 'softworld-ai-seo'); ?>
-                                            </p>
-                                        </td>
-                                    </tr>
+                                            <table class="form-table">
+                                                <tr>
+                                                    <th scope="row"><?php _e('Request Override', 'softworld-ai-seo'); ?></th>
+                                                    <td>
+                                                        <label>
+                                                            <input type="checkbox" name="request_override" value="1">
+                                                            <?php _e('I want to use custom SEO settings for this site', 'softworld-ai-seo'); ?>
+                                                        </label>
+                                                        <p class="description">
+                                                            <?php _e('This will send a request to the network administrator for permission to override network settings.', 'softworld-ai-seo'); ?>
+                                                        </p>
+                                                    </td>
+                                                </tr>
                         
-                                    <tr>
-                                        <th scope="row"><?php _e('Justification', 'softworld-ai-seo'); ?></th>
-                                        <td>
-                                            <textarea name="override_reason" class="large-text" rows="4" placeholder="<?php _e('Please explain why you need custom settings...', 'softworld-ai-seo'); ?>"></textarea>
-                                        </td>
-                                    </tr>
-                                </table>
+                                                <tr>
+                                                    <th scope="row"><?php _e('Justification', 'softworld-ai-seo'); ?></th>
+                                                    <td>
+                                                        <textarea name="override_reason" class="large-text" rows="4" placeholder="<?php _e('Please explain why you need custom settings...', 'softworld-ai-seo'); ?>"></textarea>
+                                                    </td>
+                                                </tr>
+                                            </table>
                     
-                                <p class="submit">
-                                    <button type="submit" class="button button-primary">
-                                        <?php _e('Request Override Permission', 'softworld-ai-seo'); ?>
-                                    </button>
-                                </p>
-                            </form>
-                    <?php endif; ?>
-                </div>
-                <?php
+                                            <p class="submit">
+                                                <button type="submit" class="button button-primary">
+                                                    <?php _e('Request Override Permission', 'softworld-ai-seo'); ?>
+                                                </button>
+                                            </p>
+                                        </form>
+                            <?php endif; ?>
+                        </div>
+                        <?php
     }
 
     /**
