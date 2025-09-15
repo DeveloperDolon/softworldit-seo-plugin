@@ -38,6 +38,14 @@ class Softworld_AI_SEO_Advanced_Settings
         
         // Create database tables on activation
         register_activation_hook(AI_SEO_PLUGIN_PATH . 'softworld-ai-seo-plugin.php', [$this, 'create_tables']);
+
+        // Author profile SEO hooks
+        add_action('wp_loaded', [$this, 'init_author_profile_seo']);
+        add_action('show_user_profile', [$this, 'add_user_seo_fields']);
+        add_action('edit_user_profile', [$this, 'add_user_seo_fields']);
+        add_action('personal_options_update', [$this, 'save_user_seo_fields']);
+        add_action('edit_user_profile_update', [$this, 'save_user_seo_fields']);
+        add_action('wp_head', [$this, 'output_author_seo_meta']);
     }
 
     public function init()
@@ -184,6 +192,280 @@ class Softworld_AI_SEO_Advanced_Settings
         
         return do_shortcode($excerpt);
     }
+
+    /**
+ * Initialize author profile SEO based on settings
+ */
+public function init_author_profile_seo()
+{
+    $settings = $this->get_settings();
+    
+    if (!$settings['enable_author_seo']) {
+        return;
+    }
+    
+    // Add author archive title and description filters
+    add_filter('get_the_author_meta', [$this, 'filter_author_meta'], 10, 2);
+    add_filter('wp_title', [$this, 'filter_author_archive_title'], 10, 2);
+    add_action('wp_head', [$this, 'output_author_archive_meta']);
+}
+
+/**
+ * Add SEO fields to user profile pages
+ */
+public function add_user_seo_fields($user)
+{
+    $settings = $this->get_settings();
+    
+    if (!$settings['enable_author_seo']) {
+        return;
+    }
+    
+    $seo_title = get_user_meta($user->ID, '_softworld_author_seo_title', true);
+    $seo_description = get_user_meta($user->ID, '_softworld_author_seo_description', true);
+    $seo_keywords = get_user_meta($user->ID, '_softworld_author_seo_keywords', true);
+    $social_twitter = get_user_meta($user->ID, '_softworld_author_twitter', true);
+    $social_linkedin = get_user_meta($user->ID, '_softworld_author_linkedin', true);
+    $focus_keywords = get_user_meta($user->ID, '_softworld_author_focus_keywords', true);
+    ?>
+    
+    <h3><?php _e('SEO Settings', $this->text_domain); ?></h3>
+    <table class="form-table">
+        <tr>
+            <th><label for="softworld_author_seo_title"><?php _e('SEO Title', $this->text_domain); ?></label></th>
+            <td>
+                <input type="text" name="softworld_author_seo_title" id="softworld_author_seo_title" 
+                       value="<?php echo esc_attr($seo_title); ?>" class="regular-text" maxlength="60" />
+                <p class="description"><?php _e('Custom title for author archive page (60 characters max)', $this->text_domain); ?></p>
+                <div class="character-count">
+                    <span class="current">0</span>/<span class="max">60</span>
+                </div>
+            </td>
+        </tr>
+        
+        <tr>
+            <th><label for="softworld_author_seo_description"><?php _e('Meta Description', $this->text_domain); ?></label></th>
+            <td>
+                <textarea name="softworld_author_seo_description" id="softworld_author_seo_description" 
+                          rows="3" cols="50" maxlength="155"><?php echo esc_textarea($seo_description); ?></textarea>
+                <p class="description"><?php _e('Description for author archive page (155 characters max)', $this->text_domain); ?></p>
+                <div class="character-count">
+                    <span class="current">0</span>/<span class="max">155</span>
+                </div>
+            </td>
+        </tr>
+        
+        <tr>
+            <th><label for="softworld_author_seo_keywords"><?php _e('Meta Keywords', $this->text_domain); ?></label></th>
+            <td>
+                <input type="text" name="softworld_author_seo_keywords" id="softworld_author_seo_keywords" 
+                       value="<?php echo esc_attr($seo_keywords); ?>" class="regular-text" />
+                <p class="description"><?php _e('Comma-separated keywords for this author', $this->text_domain); ?></p>
+            </td>
+        </tr>
+        
+        <tr>
+            <th><label for="softworld_author_focus_keywords"><?php _e('Focus Keywords', $this->text_domain); ?></label></th>
+            <td>
+                <input type="text" name="softworld_author_focus_keywords" id="softworld_author_focus_keywords" 
+                       value="<?php echo esc_attr($focus_keywords); ?>" class="regular-text" />
+                <p class="description"><?php _e('Primary keywords this author should rank for', $this->text_domain); ?></p>
+            </td>
+        </tr>
+        
+        <tr>
+            <th><label for="softworld_author_twitter"><?php _e('Twitter Profile', $this->text_domain); ?></label></th>
+            <td>
+                <input type="url" name="softworld_author_twitter" id="softworld_author_twitter" 
+                       value="<?php echo esc_url($social_twitter); ?>" class="regular-text" />
+                <p class="description"><?php _e('Twitter profile URL for rich snippets', $this->text_domain); ?></p>
+            </td>
+        </tr>
+        
+        <tr>
+            <th><label for="softworld_author_linkedin"><?php _e('LinkedIn Profile', $this->text_domain); ?></label></th>
+            <td>
+                <input type="url" name="softworld_author_linkedin" id="softworld_author_linkedin" 
+                       value="<?php echo esc_url($social_linkedin); ?>" class="regular-text" />
+                <p class="description"><?php _e('LinkedIn profile URL for professional context', $this->text_domain); ?></p>
+            </td>
+        </tr>
+    </table>
+    
+    <script type="text/javascript">
+    jQuery(document).ready(function($) {
+        // Character counting for SEO fields
+        function updateCharCount(field) {
+            var current = $(field).val().length;
+            var counter = $(field).siblings('.character-count');
+            counter.find('.current').text(current);
+            
+            var max = parseInt(counter.find('.max').text());
+            if (current > max * 0.8) {
+                counter.addClass('warning');
+            } else {
+                counter.removeClass('warning');
+            }
+            
+            if (current > max) {
+                counter.addClass('error');
+            } else {
+                counter.removeClass('error');
+            }
+        }
+        
+        $('#softworld_author_seo_title, #softworld_author_seo_description').on('input', function() {
+            updateCharCount(this);
+        }).trigger('input');
+    });
+    </script>
+    
+    <style>
+    .character-count { font-size: 12px; color: #666; margin-top: 5px; }
+    .character-count.warning { color: #f56e28; }
+    .character-count.error { color: #dc3232; }
+    </style>
+    <?php
+}
+
+/**
+ * Save user SEO fields
+ */
+public function save_user_seo_fields($user_id)
+{
+    if (!current_user_can('edit_user', $user_id)) {
+        return false;
+    }
+    
+    $fields = [
+        '_softworld_author_seo_title' => 'sanitize_text_field',
+        '_softworld_author_seo_description' => 'sanitize_textarea_field', 
+        '_softworld_author_seo_keywords' => 'sanitize_text_field',
+        '_softworld_author_focus_keywords' => 'sanitize_text_field',
+        '_softworld_author_twitter' => 'esc_url_raw',
+        '_softworld_author_linkedin' => 'esc_url_raw'
+    ];
+    
+    foreach ($fields as $field => $sanitize_func) {
+        $form_field = str_replace('_softworld_', 'softworld_', $field);
+        if (isset($_POST[$form_field])) {
+            $value = call_user_func($sanitize_func, $_POST[$form_field]);
+            update_user_meta($user_id, $field, $value);
+        }
+    }
+}
+
+/**
+ * Output author SEO meta tags on author archive pages
+ */
+public function output_author_archive_meta()
+{
+    if (!is_author()) {
+        return;
+    }
+    
+    $settings = $this->get_settings();
+    if (!$settings['enable_author_seo']) {
+        return;
+    }
+    
+    $author_id = get_query_var('author');
+    $author = get_userdata($author_id);
+    
+    if (!$author) {
+        return;
+    }
+    
+    $seo_title = get_user_meta($author_id, '_softworld_author_seo_title', true);
+    $seo_description = get_user_meta($author_id, '_softworld_author_seo_description', true);
+    $seo_keywords = get_user_meta($author_id, '_softworld_author_seo_keywords', true);
+    $twitter = get_user_meta($author_id, '_softworld_author_twitter', true);
+    $linkedin = get_user_meta($author_id, '_softworld_author_linkedin', true);
+    
+    // Output meta description
+    if (!empty($seo_description)) {
+        echo '<meta name="description" content="' . esc_attr($seo_description) . '">' . "\n";
+    }
+    
+    // Output keywords
+    if (!empty($seo_keywords)) {
+        echo '<meta name="keywords" content="' . esc_attr($seo_keywords) . '">' . "\n";
+    }
+    
+    // Output Open Graph tags
+    if (!empty($seo_title)) {
+        echo '<meta property="og:title" content="' . esc_attr($seo_title) . '">' . "\n";
+    }
+    
+    if (!empty($seo_description)) {
+        echo '<meta property="og:description" content="' . esc_attr($seo_description) . '">' . "\n";
+    }
+    
+    echo '<meta property="og:type" content="profile">' . "\n";
+    echo '<meta property="og:url" content="' . esc_url(get_author_posts_url($author_id)) . '">' . "\n";
+    
+    // Output Twitter Card tags
+    echo '<meta name="twitter:card" content="summary">' . "\n";
+    if (!empty($twitter)) {
+        echo '<meta name="twitter:creator" content="' . esc_attr($twitter) . '">' . "\n";
+    }
+    
+    // Schema.org Person markup
+    if ($settings['enable_author_schema']) {
+        $this->output_author_schema($author_id, $author);
+    }
+}
+
+/**
+ * Output Schema.org Person markup for author
+ */
+private function output_author_schema($author_id, $author)
+{
+    $twitter = get_user_meta($author_id, '_softworld_author_twitter', true);
+    $linkedin = get_user_meta($author_id, '_softworld_author_linkedin', true);
+    $seo_description = get_user_meta($author_id, '_softworld_author_seo_description', true);
+    
+    $schema = [
+        "@context" => "https://schema.org",
+        "@type" => "Person",
+        "name" => $author->display_name,
+        "url" => get_author_posts_url($author_id),
+        "description" => $seo_description ?: $author->description
+    ];
+    
+    // Add social profiles if available
+    $social_profiles = array_filter([$twitter, $linkedin]);
+    if (!empty($social_profiles)) {
+        $schema["sameAs"] = $social_profiles;
+    }
+    
+    // Add author image if available
+    $avatar_url = get_avatar_url($author_id, ['size' => 200]);
+    if ($avatar_url) {
+        $schema["image"] = $avatar_url;
+    }
+    
+    echo '<script type="application/ld+json">' . wp_json_encode($schema) . '</script>' . "\n";
+}
+
+/**
+ * Filter author archive title
+ */
+public function filter_author_archive_title($title, $sep = null)
+{
+    if (!is_author()) {
+        return $title;
+    }
+    
+    $author_id = get_query_var('author');
+    $custom_title = get_user_meta($author_id, '_softworld_author_seo_title', true);
+    
+    if (!empty($custom_title)) {
+        return $custom_title;
+    }
+    
+    return $title;
+}
 
     /**
      * Create database tables for query monitoring
@@ -558,6 +840,82 @@ class Softworld_AI_SEO_Advanced_Settings
                     </form>
                 </div>
 
+                <!-- Author Profile SEO Section -->
+                <div class="softworld-settings-section">
+                    <h2><?php _e('Author Profile SEO', $this->text_domain); ?></h2>
+                    <form method="post" id="softworld-author-seo-form">
+                        <?php wp_nonce_field('softworld_advanced_settings', 'softworld_nonce'); ?>
+                        <input type="hidden" name="action" value="save_author_seo_settings">
+                        
+                        <table class="form-table">
+                            <tr>
+                                <th scope="row"><?php _e('Enable Author SEO', $this->text_domain); ?></th>
+                                <td>
+                                    <label class="softworld-toggle">
+                                        <input type="checkbox" name="enable_author_seo" value="1" 
+                                            <?php checked($settings['enable_author_seo'], 1); ?>>
+                                        <span class="slider"></span>
+                                    </label>
+                                    <p class="description"><?php _e('Add SEO meta fields to user profiles and optimize author archive pages', $this->text_domain); ?></p>
+                                </td>
+                            </tr>
+                            
+                            <tr>
+                                <th scope="row"><?php _e('Enable Schema Markup', $this->text_domain); ?></th>
+                                <td>
+                                    <label>
+                                        <input type="checkbox" name="enable_author_schema" value="1" 
+                                            <?php checked($settings['enable_author_schema'], 1); ?>>
+                                        <?php _e('Add Schema.org Person markup to author pages', $this->text_domain); ?>
+                                    </label>
+                                </td>
+                            </tr>
+                            
+                            <tr>
+                                <th scope="row"><?php _e('Required User Roles', $this->text_domain); ?></th>
+                                <td>
+                                    <fieldset>
+                                        <?php
+                                        $roles = wp_roles()->get_names();
+                                        $author_seo_roles = (array)$settings['author_seo_roles'];
+                                        foreach ($roles as $role_key => $role_name):
+                                        ?>
+                                            <label>
+                                                <input type="checkbox" name="author_seo_roles[]" value="<?php echo esc_attr($role_key); ?>" 
+                                                    <?php echo in_array($role_key, $author_seo_roles) ? 'checked' : ''; ?>>
+                                                <?php echo esc_html($role_name); ?>
+                                            </label><br>
+                                        <?php endforeach; ?>
+                                    </fieldset>
+                                    <p class="description"><?php _e('Show SEO fields only for selected user roles', $this->text_domain); ?></p>
+                                </td>
+                            </tr>
+                            
+                            <tr>
+                                <th scope="row"><?php _e('Auto-generate Descriptions', $this->text_domain); ?></th>
+                                <td>
+                                    <label>
+                                        <input type="checkbox" name="auto_generate_author_descriptions" value="1" 
+                                            <?php checked($settings['auto_generate_author_descriptions'], 1); ?>>
+                                        <?php _e('Automatically generate meta descriptions from user bio if custom description is empty', $this->text_domain); ?>
+                                    </label>
+                                </td>
+                            </tr>
+                            
+                            <tr>
+                                <th scope="row"><?php _e('Default Title Format', $this->text_domain); ?></th>
+                                <td>
+                                    <input type="text" name="author_title_format" value="<?php echo esc_attr($settings['author_title_format']); ?>" 
+                                        class="regular-text" placeholder="{{author_name}} - {{site_name}}" />
+                                    <p class="description"><?php _e('Default title format for author pages. Use {{author_name}} and {{site_name}} as placeholders', $this->text_domain); ?></p>
+                                </td>
+                            </tr>
+                        </table>
+                        
+                        <?php submit_button(__('Save Author SEO Settings', $this->text_domain), 'primary', 'save_author_seo_settings'); ?>
+                    </form>
+                </div>
+
                 <!-- Query Args Statistics -->
                 <div class="softworld-settings-section">
                     <h2><?php _e('Query Arguments Statistics', $this->text_domain); ?></h2>
@@ -736,6 +1094,8 @@ class Softworld_AI_SEO_Advanced_Settings
             $this->save_admin_ui_settings();
         } elseif ($action === 'save_shortcode_settings') {
             $this->save_shortcode_settings();
+        } elseif ($action === 'save_author_seo_settings') {
+            $this->save_author_seo_settings();
         }
     }
 
@@ -812,6 +1172,24 @@ class Softworld_AI_SEO_Advanced_Settings
     }
 
     /**
+     * Save author SEO settings
+     */
+    private function save_author_seo_settings()
+    {
+        $settings = [
+            'enable_author_seo' => isset($_POST['enable_author_seo']) ? 1 : 0,
+            'enable_author_schema' => isset($_POST['enable_author_schema']) ? 1 : 0,
+            'author_seo_roles' => isset($_POST['author_seo_roles']) ? array_map('sanitize_text_field', $_POST['author_seo_roles']) : ['author', 'editor', 'administrator'],
+            'auto_generate_author_descriptions' => isset($_POST['auto_generate_author_descriptions']) ? 1 : 0,
+            'author_title_format' => sanitize_text_field($_POST['author_title_format'] ?? '{{author_name}} - {{site_name}}')
+        ];
+
+        update_option('softworld_author_seo_settings', $settings);
+        add_settings_error('softworld_advanced_settings', 'settings_updated', 
+            __('Author SEO settings saved successfully.', $this->text_domain), 'updated');
+    }
+
+    /**
      * Get all settings with defaults
      */
     private function get_settings()
@@ -820,6 +1198,7 @@ class Softworld_AI_SEO_Advanced_Settings
         $admin_ui_settings = get_option('softworld_admin_ui_settings', []);
         $query_settings = get_option('softworld_query_settings', []);
         $shortcode_settings = get_option('softworld_shortcode_settings', []);
+        $author_seo_settings = get_option('softworld_author_seo_settings', []);
 
         return array_merge([
             // Email settings defaults
@@ -848,8 +1227,14 @@ class Softworld_AI_SEO_Advanced_Settings
             'process_custom_meta_fields' => 0,
             'custom_meta_fields_list' => '',
             'allowed_shortcodes' => '',
-            'cache_processed_shortcodes' => 1
-        ], $email_settings, $admin_ui_settings, $query_settings, $shortcode_settings);
+            'cache_processed_shortcodes' => 1,
+            // Author SEO settings defaults
+            'enable_author_seo' => 0,
+            'enable_author_schema' => 1,
+            'author_seo_roles' => ['author', 'editor', 'administrator'],
+            'auto_generate_author_descriptions' => 1,
+            'author_title_format' => '{{author_name}} - {{site_name}}',
+        ], $email_settings, $admin_ui_settings, $query_settings, $shortcode_settings, $author_seo_settings);
     }
 
     /**

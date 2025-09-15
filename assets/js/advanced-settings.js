@@ -20,7 +20,8 @@
 
       // Export query data
       $("#export-query-data").on("click", this.exportQueryData);
-
+      // Toggle author SEO settings
+      $('input[name="enable_author_seo"]').on('change', this.toggleAuthorSeoSettings);
       // Real-time settings validation
       $('input[name="report_recipients"]').on("blur", this.validateEmails);
 
@@ -38,6 +39,21 @@
       this.setupAutoSave();
     },
 
+    toggleAuthorSeoSettings: function() {
+        var isEnabled = $('input[name="enable_author_seo"]').is(':checked');
+        var authorForm = $('#softworld-author-seo-form');
+        
+        authorForm.find('input, select, textarea, button')
+            .not('input[name="enable_author_seo"]')
+            .prop('disabled', !isEnabled);
+        
+        if (isEnabled) {
+            authorForm.removeClass('disabled');
+        } else {
+            authorForm.addClass('disabled');
+        }
+    },
+
     initializeComponents: function () {
       // Initialize tooltips if available
       if ($.fn.tooltip) {
@@ -47,7 +63,8 @@
       // Set initial toggle states
       this.toggleEmailSettings();
       this.toggleQuerySettings();
-
+      this.toggleAuthorSeoSettings(); // Add this line
+      
       // Load dashboard stats periodically
       this.refreshStats();
       setInterval(this.refreshStats, 300000); // Every 5 minutes
