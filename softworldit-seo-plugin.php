@@ -38,6 +38,9 @@ require_once plugin_dir_path(__FILE__) . 'includes/advanced-settings.php';
 require_once plugin_dir_path(__FILE__) . 'includes/corn-schedule-helper.php';
 require_once plugin_dir_path(__FILE__) . 'includes/multisite-network-manager.php';
 require_once plugin_dir_path(__FILE__) . 'includes/local-seo-manager.php';
+require_once plugin_dir_path(__FILE__) . 'includes/ai-seo-generator.php';
+require_once plugin_dir_path(__FILE__) . 'includes/ai-settings.php';
+require_once plugin_dir_path(__FILE__) . 'includes/enhanced-meta-boxes.php';
 
 // Another services Includes
 require_once plugin_dir_path(__FILE__) . 'includes/another_services/meta-boxes.php';
@@ -77,6 +80,9 @@ class Softworld_AI_SEO_Plugin
     private $multisite_manager;
     private $local_seo_manager;
     private $dx_troubleshooter;
+    private $ai_generator;
+    private $ai_settings;
+    private $enhanced_meta_boxes;
 
     public function __construct()
     {
@@ -147,6 +153,12 @@ class Softworld_AI_SEO_Plugin
         $this->link_assistant = new Softworld_AI_SEO_Link_Assistant('softworld-ai-seo');
         $this->advanced_settings = new Softworld_AI_SEO_Advanced_Settings('softworld-ai-seo');
         $this->local_seo_manager = new Softworld_AI_SEO_Local_Manager('softworld-ai-seo');
+        // Initialize AI Generator
+        $this->ai_generator = new Softworld_AI_SEO_Generator();
+        // Initialize AI Settings
+        $this->ai_settings = new Softworld_AI_SEO_Settings();
+        // Initialize Enhanced Meta Boxes (replaces the old meta box system)
+        $this->enhanced_meta_boxes = new Softworld_Enhanced_Meta_Boxes();
     }
 
     /**
@@ -157,8 +169,8 @@ class Softworld_AI_SEO_Plugin
         add_action('wp_ajax_softworld_search_posts', [$this, 'ajax_search_posts']);
         add_action('wp_ajax_softworld_search_pages', [$this, 'ajax_search_pages']);
         add_action('wp_ajax_softworld_manual_ping', [$this, 'ajax_manual_ping']);
-        add_shortcode('softworld_seo_title', array($this, 'seo_title_shortcode'));
-        add_shortcode('softworld_seo_description', array($this, 'seo_description_shortcode'));
+        add_shortcode('softworld_ai_title', [$this, 'softworld_ai_title_shortcode']);
+        add_shortcode('softworld_ai_description', [$this, 'softworld_ai_description_shortcode']);
 
         // NEW: Add NGINX and robots.txt AJAX handlers for network admin
         if (is_multisite() && is_network_admin()) {
@@ -606,23 +618,54 @@ class Softworld_AI_SEO_Plugin
         return $this->variable_replacer->get_seo_description($post_id);
     }
 
-    // Shortcode methods
-    public function seo_title_shortcode($atts)
-    {
-        $atts = shortcode_atts(array(
-            'id' => get_the_ID(),
-        ), $atts);
+    /**
+     * Shortcode for AI-generated SEO title
+     */
+    function softworld_ai_title_shortcode($atts) {
+        $atts = shortcode_atts([
+            'post_id' => get_the_ID(),
+            'keywords' => '',
+            'tone' => 'professional'
+        ], $atts);
 
-        return $this->get_seo_title($atts['id']);
+        if (!softworld_is_ai_available()) {
+            return '';
+        }
+
+        $post = get_post($atts['post_id']);
+        if (!$post) {
+            return '';
+        }
+
+        $content = $post->post_title . "\n\n" . $post->post_content;
+        $result = softworld_generate_ai_title($content, $post->post_type, $atts['keywords'], $atts['tone']);
+
+        return is_wp_error($result) ? '' : esc_html($result);
     }
 
-    public function seo_description_shortcode($atts)
-    {
-        $atts = shortcode_atts(array(
-            'id' => get_the_ID(),
-        ), $atts);
+    /**
+     * Shortcode for AI-generated SEO description
+     */
+    function softworld_ai_description_shortcode($atts) {
+        $atts = shortcode_atts([
+            'post_id' => get_the_ID(),
+            'keywords' => '',
+            'tone' => 'professional'
+        ], $atts);
 
-        return $this->get_seo_description($atts['id']);
+        if (!softworld_is_ai_available()) {
+            return '';
+        }
+
+        $post = get_post($atts['post_id']);
+        if (!$post) {
+            return '';
+        }
+
+        $content = $post->post_title . "\n\n" . $post->post_content;
+        $result = softworld_generate_ai_description($content, $post->post_type, $atts['keywords'], $atts['tone']);
+
+        return is_wp_error($result) ? '' : esc_html($result);
     }
 
     public function ajax_search_posts()
@@ -776,29 +819,30 @@ class Softworld_AI_SEO_Plugin
 
     public function render_meta_box($post)
     {
-        // Your meta box content here
-        echo '<div class="softworld-ai-seo-meta-box">';
-        echo '<p>AI-powered SEO optimization will go here.</p>';
+        // // Your meta box content here
+        // echo '<div class="softworld-ai-seo-meta-box">';
+        // echo '<p>AI-powered SEO optimization will go here.</p>';
 
-        // Example: Add nonce field for security
-        wp_nonce_field('softworld_ai_seo_meta_box', 'softworld_ai_seo_nonce');
+        // // Example: Add nonce field for security
+        // wp_nonce_field('softworld_ai_seo_meta_box', 'softworld_ai_seo_nonce');
 
-        // Example: Get existing meta values
-        $meta_title = get_post_meta($post->ID, '_softworld_ai_seo_title', true);
-        $meta_description = get_post_meta($post->ID, '_softworld_ai_seo_description', true);
+        // // Example: Get existing meta values
+        // $meta_title = get_post_meta($post->ID, '_softworld_ai_seo_title', true);
+        // $meta_description = get_post_meta($post->ID, '_softworld_ai_seo_description', true);
 
-        // Example form fields
-        echo '<div style="margin: 10px 0;">';
-        echo '<label for="softworld_ai_seo_title" style="display: block; margin-bottom: 5px; font-weight: bold;">SEO Title:</label>';
-        echo '<input type="text" id="softworld_ai_seo_title" name="softworld_ai_seo_title" value="' . esc_attr($meta_title) . '" style="width: 100%; padding: 5px;">';
-        echo '</div>';
+        // // Example form fields
+        // echo '<div style="margin: 10px 0;">';
+        // echo '<label for="softworld_ai_seo_title" style="display: block; margin-bottom: 5px; font-weight: bold;">SEO Title:</label>';
+        // echo '<input type="text" id="softworld_ai_seo_title" name="softworld_ai_seo_title" value="' . esc_attr($meta_title) . '" style="width: 100%; padding: 5px;">';
+        // echo '</div>';
 
-        echo '<div style="margin: 10px 0;">';
-        echo '<label for="softworld_ai_seo_description" style="display: block; margin-bottom: 5px; font-weight: bold;">SEO Description:</label>';
-        echo '<textarea id="softworld_ai_seo_description" name="softworld_ai_seo_description" style="width: 100%; height: 80px; padding: 5px;">' . esc_textarea($meta_description) . '</textarea>';
-        echo '</div>';
+        // echo '<div style="margin: 10px 0;">';
+        // echo '<label for="softworld_ai_seo_description" style="display: block; margin-bottom: 5px; font-weight: bold;">SEO Description:</label>';
+        // echo '<textarea id="softworld_ai_seo_description" name="softworld_ai_seo_description" style="width: 100%; height: 80px; padding: 5px;">' . esc_textarea($meta_description) . '</textarea>';
+        // echo '</div>';
 
-        echo '</div>';
+        // echo '</div>';
+        echo '<p>Meta box rendering is now handled by Enhanced Meta Boxes class.</p>';
     }
 
     public function enqueue_scripts()
@@ -1008,6 +1052,29 @@ class Softworld_AI_SEO_Plugin
                 'invalid_url' => __('Please enter a valid URL', 'softworld-ai-seo')
             ]
         ]);
+
+        // Enqueue AI admin scripts
+        wp_enqueue_script(
+            'softworldit-ai-seo-admin',
+            plugin_dir_url(__FILE__) . 'assets/js/ai-admin.js',
+            ['jquery'],
+            '1.0.0',
+            true
+        );
+
+        // Localize AI script
+        wp_localize_script('softworldit-ai-seo-admin', 'softworldAISettings', [
+            'nonce' => wp_create_nonce('softworld_ai_seo_nonce'),
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'autoGenerate' => get_option('softworld_ai_seo_enable_auto_generation', 0),
+            'i18n' => [
+                'generating' => __('Generating...', 'softworld-ai-seo'),
+                'generated' => __('Generated successfully!', 'softworld-ai-seo'),
+                'error' => __('Error occurred', 'softworld-ai-seo'),
+                'content_required' => __('Please add some content first.', 'softworld-ai-seo'),
+                'ai_unavailable' => __('AI features are not available.', 'softworld-ai-seo')
+            ]
+        ]);
     }
 
     public function activate()
@@ -1031,6 +1098,11 @@ class Softworld_AI_SEO_Plugin
         if ($this->advanced_settings) {
             $this->advanced_settings->create_tables();
         }
+
+        // Create AI usage tracking table
+        if ($this->ai_generator) {
+            $this->ai_generator->create_usage_table();
+        } 
 
         // Create network tables if multisite
         if (is_multisite() && $this->multisite_manager) {
@@ -1104,6 +1176,55 @@ class Softworld_AI_SEO_Plugin
 
     User-agent: MJ12bot
     Crawl-delay: 10";
+    }
+
+    
+    /**
+     * Get AI generator instance
+     */
+    public function get_ai_generator()
+    {
+        return $this->ai_generator;
+    }
+
+    /**
+     * Get AI settings instance
+     */
+    public function get_ai_settings()
+    {
+        return $this->ai_settings;
+    }
+
+    /**
+     * Check if AI features are available
+     */
+    public function is_ai_available()
+    {
+        return $this->ai_generator ? $this->ai_generator->is_ai_available() : false;
+    }
+
+    /**
+     * Generate SEO title using AI
+     */
+    public function generate_ai_seo_title($content, $post_type = 'post', $keywords = '', $tone = 'professional')
+    {
+        if (!$this->ai_generator) {
+            return new WP_Error('ai_not_available', __('AI generator not available', 'softworld-ai-seo'));
+        }
+        
+        return $this->ai_generator->generate_seo_title($content, $post_type, $keywords, $tone);
+    }
+
+    /**
+     * Generate SEO description using AI
+     */
+    public function generate_ai_seo_description($content, $post_type = 'post', $keywords = '', $tone = 'professional')
+    {
+        if (!$this->ai_generator) {
+            return new WP_Error('ai_not_available', __('AI generator not available', 'softworld-ai-seo'));
+        }
+        
+        return $this->ai_generator->generate_seo_description($content, $post_type, $keywords, $tone);
     }
 
     // Add this method to handle robots.txt output for multisite:
@@ -1525,18 +1646,7 @@ class Softworld_AI_SEO_Plugin
 
     public function render_ai_settings_admin()
     {
-        ?>
-        <div class="wrap">
-            <h1>AI Settings</h1>
-            <form method="post" action="options.php">
-                <?php
-                settings_fields('softworld_ai_settings_group');
-                do_settings_sections('softworldit-seo-settings');
-                submit_button();
-                ?>
-            </form>
-        </div>
-        <?php
+        $this->ai_settings->render_admin_page();
     }
 
     public function render_dashboard()
@@ -2097,6 +2207,50 @@ function softworld_ai_seo_is_license_valid()
     // For multisite, check network license
     $license_info = get_site_option('softworld_ai_seo_network_license', []);
     return !empty($license_info['valid']);
+}
+
+/**
+ * Get the main plugin instance
+ */
+function softworld_ai_seo()
+{
+    global $softworld_ai_seo_plugin;
+    return $softworld_ai_seo_plugin;
+}
+
+/**
+ * Helper function to generate AI SEO title
+ */
+function softworld_generate_ai_title($content, $post_type = 'post', $keywords = '', $tone = 'professional')
+{
+    $plugin = softworld_ai_seo();
+    if (!$plugin) {
+        return new WP_Error('plugin_not_available', 'Plugin not available');
+    }
+    
+    return $plugin->generate_ai_seo_title($content, $post_type, $keywords, $tone);
+}
+
+/**
+ * Helper function to generate AI SEO description
+ */
+function softworld_generate_ai_description($content, $post_type = 'post', $keywords = '', $tone = 'professional')
+{
+    $plugin = softworld_ai_seo();
+    if (!$plugin) {
+        return new WP_Error('plugin_not_available', 'Plugin not available');
+    }
+    
+    return $plugin->generate_ai_seo_description($content, $post_type, $keywords, $tone);
+}
+
+/**
+ * Check if AI features are available
+ */
+function softworld_is_ai_available()
+{
+    $plugin = softworld_ai_seo();
+    return $plugin ? $plugin->is_ai_available() : false;
 }
 
 /**
