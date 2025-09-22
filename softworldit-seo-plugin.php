@@ -48,13 +48,16 @@ require_once plugin_dir_path(__FILE__) . 'includes/another_services/save_meta_bo
 require_once plugin_dir_path(__FILE__) . 'includes/another_services/setup-wizard.php';
 require_once plugin_dir_path(__FILE__) . 'includes/another_services/search-appearance.php';
 
-// ds seo redirects
+// dx seo redirects
 require_once plugin_dir_path(__FILE__) . 'includes/dx-seo-redirect/activator.php';
 require_once plugin_dir_path(__FILE__) . 'includes/dx-seo-redirect/deactivator.php';
 require_once plugin_dir_path(__FILE__) . 'includes/dx-seo-redirect/helpers.php';
 require_once plugin_dir_path(__FILE__) . 'includes/dx-seo-redirect/router.php';
 require_once plugin_dir_path(__FILE__) . 'includes/dx-seo-redirect/settings.php';
 require_once plugin_dir_path(__FILE__) . 'includes/dx-seo-redirect/admin-menu.php';
+
+// dx troubleshooter
+require_once plugin_dir_path(__FILE__) . 'includes/dxseo-troubleshooter/dxseo-troubleshooter.php';
 
 // main plugin class
 class Softworld_AI_SEO_Plugin
@@ -73,6 +76,7 @@ class Softworld_AI_SEO_Plugin
     private $advanced_settings;
     private $multisite_manager;
     private $local_seo_manager;
+    private $dx_troubleshooter;
 
     public function __construct()
     {
@@ -105,6 +109,13 @@ class Softworld_AI_SEO_Plugin
         add_action('plugins_loaded', function () {
             if (class_exists('DXSEO_Admin_Menu')) {
                 DXSEO_Admin_Menu::init();
+            }
+        });
+
+        add_action('plugins_loaded', function () {
+            if (class_exists('DXSEO_Troubleshooter')) {
+                $this->dx_troubleshooter = new DXSEO_Troubleshooter();
+                DXSEO_Troubleshooter::init();
             }
         });
     }
@@ -156,6 +167,24 @@ class Softworld_AI_SEO_Plugin
             add_action('wp_ajax_softworld_network_apply_robots_to_sites', [$this->multisite_manager, 'ajax_apply_robots_to_sites']);
             add_action('wp_ajax_softworld_reset_site_robots', [$this, 'ajax_reset_site_robots']);
         }
+
+        // AJAX for one-time secret
+        add_action('wp_ajax_dxseo_create_one_time_secret', function(){
+            check_ajax_referer('dxseo_nonce');
+            if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+            $payload = wp_unslash($_POST['payload'] ?? '');
+            $ttl = intval($_POST['ttl'] ?? 3600);
+            $ttl = max(60, $ttl);
+            require_once __FILE__;
+            if (class_exists('DXSEO_Troubleshooter')) {
+                $token = DXSEO_Troubleshooter::create_one_time_secret($payload, $ttl);
+                $url = add_query_arg('dxseo_one_time_token', $token, home_url('/'));
+                wp_send_json_success(['url' => $url]);
+            } else {
+                wp_send_json_error('Plugin class missing');
+            }
+        });
+
     }
 
     public function init()
@@ -1300,6 +1329,19 @@ class Softworld_AI_SEO_Plugin
 
         add_submenu_page(
             'softworld-ai-seo',
+            __('Troubleshooting & Support Infrastructure', 'softworld-ai-seo'),
+            __('Troubleshooting & Support Infrastructure', 'softworld-ai-seo'),
+            'manage_options',
+            'softworld-ai-seo-troubleshooter',
+            [$this->dx_troubleshooter, 'render_admin_page']
+        );
+
+        // add_menu_page('Troubleshooting & Support Infrastructure', 
+        // 'Troubleshooting & Support Infrastructure', 'manage_options', 
+        // 'dxseo_troubleshoot', [__CLASS__, 'render_admin_page'], 'dashicons-admin-tools', 59);
+
+        add_submenu_page(
+            'softworld-ai-seo',
             __('Crawl Optimization', 'softworld-ai-seo'),
             __('Crawl Optimization', 'softworld-ai-seo'),
             'manage_options',
@@ -2075,3 +2117,22 @@ add_filter('option_softworld_ai_seo_description', function ($value, $option) {
     }
     return $value;
 }, 10, 2);
+
+DXSEO_Troubleshooter::init();
+
+// AJAX for one-time secret
+add_action('wp_ajax_dxseo_create_one_time_secret', function(){
+    check_ajax_referer('dxseo_nonce');
+    if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+    $payload = wp_unslash($_POST['payload'] ?? '');
+    $ttl = intval($_POST['ttl'] ?? 3600);
+    $ttl = max(60, $ttl);
+    require_once __FILE__;
+    if (class_exists('DXSEO_Troubleshooter')) {
+        $token = DXSEO_Troubleshooter::create_one_time_secret($payload, $ttl);
+        $url = add_query_arg('dxseo_one_time_token', $token, home_url('/'));
+        wp_send_json_success(['url' => $url]);
+    } else {
+        wp_send_json_error('Plugin class missing');
+    }
+});
