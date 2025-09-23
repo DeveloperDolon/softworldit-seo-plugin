@@ -68,451 +68,398 @@ class Softworld_Enhanced_Meta_Boxes
         $default_tone = get_option('softworld_ai_seo_default_tone', 'professional');
 
         ?>
-        <div class="softworld-seo-meta-box">
-            
-            <?php if (!$ai_available): ?>
-                <div class="notice notice-info inline">
-                    <p>
-                        <?php _e('AI features are not available. Configure your OpenAI API key in', 'softworld-ai-seo'); ?>
-                        <a href="<?php echo admin_url('admin.php?page=softworldit-seo-settings'); ?>" target="_blank">
-                            <?php _e('AI Settings', 'softworld-ai-seo'); ?>
-                        </a>
-                        <?php _e('to enable AI-powered SEO generation.', 'softworld-ai-seo'); ?>
-                    </p>
-                </div>
-            <?php endif; ?>
-
-            <!-- SEO Title Section -->
-            <div class="softworld-field-group">
-                <label for="softworld_ai_seo_title" class="softworld-field-label">
-                    <strong><?php _e('SEO Title', 'softworld-ai-seo'); ?></strong>
-                    <span class="softworld-field-description"><?php _e('Recommended: 50-60 characters', 'softworld-ai-seo'); ?></span>
-                </label>
-                
-                <div class="softworld-ai-field-container">
-                    <input type="text" 
-                           id="softworld_ai_seo_title" 
-                           name="softworld_ai_seo_title" 
-                           value="<?php echo esc_attr($seo_title); ?>" 
-                           class="widefat softworld-seo-input" 
-                           placeholder="<?php _e('Enter SEO title...', 'softworld-ai-seo'); ?>" 
-                           maxlength="60" />
-                    
-                    <div class="softworld-char-counter" data-max="60">
-                        <span class="current"><?php echo strlen($seo_title); ?></span> / <span class="max">60</span> <?php _e('characters', 'softworld-ai-seo'); ?>
-                    </div>
-
-                    <?php if ($ai_available): ?>
-                        <div class="softworld-ai-controls">
-                            <button type="button" class="button softworld-ai-generate" data-type="title">
-                                <span class="dashicons dashicons-admin-generic"></span>
-                                <?php _e('Generate SEO Title', 'softworld-ai-seo'); ?>
-                            </button>
-                            
-                            <div class="softworld-ai-options" style="display: none;">
-                                <div class="softworld-ai-options-grid">
-                                    <div class="ai-option">
-                                        <label for="title-keywords"><?php _e('Target Keywords', 'softworld-ai-seo'); ?></label>
-                                        <input type="text" id="title-keywords" class="softworld-target-keywords" placeholder="<?php _e('Optional keywords...', 'softworld-ai-seo'); ?>">
-                                    </div>
-                                    <div class="ai-option">
-                                        <label for="title-tone"><?php _e('Tone', 'softworld-ai-seo'); ?></label>
-                                        <select id="title-tone" class="softworld-tone-select">
-                                            <option value="professional" <?php selected($default_tone, 'professional'); ?>><?php _e('Professional', 'softworld-ai-seo'); ?></option>
-                                            <option value="casual" <?php selected($default_tone, 'casual'); ?>><?php _e('Casual', 'softworld-ai-seo'); ?></option>
-                                            <option value="friendly" <?php selected($default_tone, 'friendly'); ?>><?php _e('Friendly', 'softworld-ai-seo'); ?></option>
-                                            <option value="authoritative" <?php selected($default_tone, 'authoritative'); ?>><?php _e('Authoritative', 'softworld-ai-seo'); ?></option>
-                                            <option value="conversational" <?php selected($default_tone, 'conversational'); ?>><?php _e('Conversational', 'softworld-ai-seo'); ?></option>
-                                            <option value="engaging" <?php selected($default_tone, 'engaging'); ?>><?php _e('Engaging', 'softworld-ai-seo'); ?></option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="ai-action-buttons">
-                                    <button type="button" class="button-primary softworld-generate-now">
-                                        <?php _e('Generate', 'softworld-ai-seo'); ?>
-                                    </button>
-                                    <button type="button" class="button softworld-cancel-generate">
-                                        <?php _e('Cancel', 'softworld-ai-seo'); ?>
-                                    </button>
-                                </div>
+        <div class="softworld-meta-box-container">
+            <table class="form-table" style="margin: 0;">
+                <tbody>
+                    <?php if (!$ai_available): ?>
+                    <tr>
+                        <th scope="row"><?php _e('Warning', 'softworld-ai-seo'); ?></th>
+                        <td>
+                            <div style="background-color:#fff3cd; border:1px solid #ffeeba; color:#856404; padding:12px; border-radius:6px; margin:10px 0;">
+                                <p style="margin:0;">
+                                    <?php _e('AI features are not available. Please configure your OpenAI API key in', 'softworld-ai-seo'); ?> 
+                                    <a href="<?php echo admin_url('admin.php?page=softworldit-seo-settings'); ?>" style="color:#856404; font-weight:bold; text-decoration:underline;">
+                                        <?php _e('AI Settings', 'softworld-ai-seo'); ?>
+                                    </a>.
+                                </p>
                             </div>
-                            
-                            <div class="softworld-ai-status"></div>
-                        </div>
+                        </td>
+                    </tr>
                     <?php endif; ?>
-                </div>
-            </div>
 
-            <!-- SEO Description Section -->
-            <div class="softworld-field-group">
-                <label for="softworld_ai_seo_description" class="softworld-field-label">
-                    <strong><?php _e('Meta Description', 'softworld-ai-seo'); ?></strong>
-                    <span class="softworld-field-description"><?php _e('Recommended: 150-160 characters', 'softworld-ai-seo'); ?></span>
-                </label>
-                
-                <div class="softworld-ai-field-container">
-                    <textarea id="softworld_ai_seo_description" 
-                              name="softworld_ai_seo_description" 
-                              class="widefat softworld-seo-textarea" 
-                              rows="3" 
-                              placeholder="<?php _e('Enter meta description...', 'softworld-ai-seo'); ?>"
-                              maxlength="160"><?php echo esc_textarea($seo_description); ?></textarea>
-                    
-                    <div class="softworld-char-counter" data-max="160" data-optimal-min="150">
-                        <span class="current"><?php echo strlen($seo_description); ?></span> / <span class="max">160</span> <?php _e('characters', 'softworld-ai-seo'); ?>
-                    </div>
-
-                    <?php if ($ai_available): ?>
-                        <div class="softworld-ai-controls">
-                            <button type="button" class="button softworld-ai-generate" data-type="description">
-                                <span class="dashicons dashicons-admin-generic"></span>
-                                <?php _e('Generate Meta Description', 'softworld-ai-seo'); ?>
-                            </button>
+                    <!-- SEO Title Row -->
+                    <tr>
+                        <th scope="row">
+                            <label for="softworld_ai_seo_title"><?php _e('SEO Title', 'softworld-ai-seo'); ?></label>
+                        </th>
+                        <td>
+                            <input type="text" 
+                                id="softworld_ai_seo_title" 
+                                name="softworld_ai_seo_title" 
+                                value="<?php echo esc_attr($seo_title); ?>" 
+                                class="regular-text"
+                                style="width: 100%; margin-bottom: 5px;"
+                                maxlength="60"
+                                placeholder="<?php _e('Enter SEO title...', 'softworld-ai-seo'); ?>">
                             
-                            <div class="softworld-ai-options" style="display: none;">
-                                <div class="softworld-ai-options-grid">
-                                    <div class="ai-option">
-                                        <label for="desc-keywords"><?php _e('Target Keywords', 'softworld-ai-seo'); ?></label>
-                                        <input type="text" id="desc-keywords" class="softworld-target-keywords" placeholder="<?php _e('Optional keywords...', 'softworld-ai-seo'); ?>">
-                                    </div>
-                                    <div class="ai-option">
-                                        <label for="desc-tone"><?php _e('Tone', 'softworld-ai-seo'); ?></label>
-                                        <select id="desc-tone" class="softworld-tone-select">
-                                            <option value="professional" <?php selected($default_tone, 'professional'); ?>><?php _e('Professional', 'softworld-ai-seo'); ?></option>
-                                            <option value="casual" <?php selected($default_tone, 'casual'); ?>><?php _e('Casual', 'softworld-ai-seo'); ?></option>
-                                            <option value="friendly" <?php selected($default_tone, 'friendly'); ?>><?php _e('Friendly', 'softworld-ai-seo'); ?></option>
-                                            <option value="authoritative" <?php selected($default_tone, 'authoritative'); ?>><?php _e('Authoritative', 'softworld-ai-seo'); ?></option>
-                                            <option value="conversational" <?php selected($default_tone, 'conversational'); ?>><?php _e('Conversational', 'softworld-ai-seo'); ?></option>
-                                            <option value="engaging" <?php selected($default_tone, 'engaging'); ?>><?php _e('Engaging', 'softworld-ai-seo'); ?></option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="ai-action-buttons">
-                                    <button type="button" class="button-primary softworld-generate-now">
-                                        <?php _e('Generate', 'softworld-ai-seo'); ?>
-                                    </button>
-                                    <button type="button" class="button softworld-cancel-generate">
-                                        <?php _e('Cancel', 'softworld-ai-seo'); ?>
-                                    </button>
-                                </div>
+                            <div class="char-counter" id="title-counter" style="font-size: 12px; color: #666; margin-bottom: 8px;">
+                                <span class="current"><?php echo strlen($seo_title); ?></span> / 60 characters
                             </div>
-                            
-                            <div class="softworld-ai-status"></div>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            </div>
-
-            <!-- Additional SEO Fields -->
-            <div class="softworld-field-group">
-                <label for="softworld_ai_seo_focus_keyword" class="softworld-field-label">
-                    <strong><?php _e('Focus Keyword', 'softworld-ai-seo'); ?></strong>
-                    <span class="softworld-field-description"><?php _e('Primary keyword for this content', 'softworld-ai-seo'); ?></span>
-                </label>
-                <input type="text" 
-                       id="softworld_ai_seo_focus_keyword" 
-                       name="softworld_ai_seo_focus_keyword" 
-                       value="<?php echo esc_attr($focus_keyword); ?>" 
-                       class="widefat softworld-seo-input" 
-                       placeholder="<?php _e('Enter focus keyword...', 'softworld-ai-seo'); ?>" />
-            </div>
-
-            <div class="softworld-field-group">
-                <label for="softworld_ai_seo_meta_keywords" class="softworld-field-label">
-                    <strong><?php _e('Meta Keywords', 'softworld-ai-seo'); ?></strong>
-                    <span class="softworld-field-description"><?php _e('Comma-separated keywords (optional)', 'softworld-ai-seo'); ?></span>
-                </label>
-                <input type="text" 
-                       id="softworld_ai_seo_meta_keywords" 
-                       name="softworld_ai_seo_meta_keywords" 
-                       value="<?php echo esc_attr($meta_keywords); ?>" 
-                       class="widefat softworld-seo-input" 
-                       placeholder="<?php _e('keyword1, keyword2, keyword3...', 'softworld-ai-seo'); ?>" />
-            </div>
-
-            <!-- SEO Preview -->
-            <div class="softworld-field-group">
-                <h4><?php _e('Search Preview', 'softworld-ai-seo'); ?></h4>
-                <div class="softworld-seo-preview">
-                    <div class="preview-url">
-                        <?php echo esc_url(get_permalink($post->ID) ?: home_url('/')); ?>
-                    </div>
-                    <div class="preview-title" id="preview-title">
-                        <?php echo esc_html($seo_title ?: $post->post_title ?: 'Your SEO Title'); ?>
-                    </div>
-                    <div class="preview-description" id="preview-description">
-                        <?php echo esc_html($seo_description ?: 'Your meta description will appear here...'); ?>
-                    </div>
-                </div>
-            </div>
-
-            <?php if ($ai_available): ?>
-                <!-- Quick AI Actions -->
-                <div class="softworld-field-group">
-                    <h4><?php _e('Quick AI Actions', 'softworld-ai-seo'); ?></h4>
-                    <div class="softworld-quick-actions">
-                        <button type="button" class="button button-secondary softworld-generate-both">
-                            <span class="dashicons dashicons-admin-generic"></span>
-                            <?php _e('Generate Both Title & Description', 'softworld-ai-seo'); ?>
-                        </button>
                         
-                        <div class="softworld-ai-bulk-settings" style="display: none;">
-                            <label>
-                                <?php _e('Tone:', 'softworld-ai-seo'); ?>
-                                <select class="softworld-bulk-tone">
-                                    <option value="professional"><?php _e('Professional', 'softworld-ai-seo'); ?></option>
-                                    <option value="casual"><?php _e('Casual', 'softworld-ai-seo'); ?></option>
-                                    <option value="friendly"><?php _e('Friendly', 'softworld-ai-seo'); ?></option>
-                                    <option value="authoritative"><?php _e('Authoritative', 'softworld-ai-seo'); ?></option>
-                                </select>
-                            </label>
-                            <label>
-                                <?php _e('Keywords:', 'softworld-ai-seo'); ?>
-                                <input type="text" class="softworld-bulk-keywords" placeholder="<?php _e('Optional keywords...', 'softworld-ai-seo'); ?>">
-                            </label>
-                            <button type="button" class="button-primary softworld-generate-both-now">
-                                <?php _e('Generate Both', 'softworld-ai-seo'); ?>
-                            </button>
-                            <button type="button" class="button softworld-cancel-bulk">
-                                <?php _e('Cancel', 'softworld-ai-seo'); ?>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            <?php endif; ?>
+                            <?php if ($ai_available): ?>
+                            <div class="ai-controls" style="margin-bottom: 10px;">
+                                <button type="button" 
+                                        class="button button-secondary ai-generate-btn" 
+                                        data-type="title"
+                                        style="margin-right: 10px;">
+                                    <span class="dashicons dashicons-admin-generic" style="font-size: 14px; vertical-align: middle;"></span>
+                                    <?php _e('Generate SEO Title', 'softworld-ai-seo'); ?>
+                                </button>
+                                
+                                <div class="ai-options" style="display: none; margin-top: 10px; padding: 10px; background: #f9f9f9; border: 1px solid #ddd;">
+                                    <div style="margin-bottom: 8px;">
+                                        <label style="display: inline-block; width: 80px; font-size: 12px;"><?php _e('Keywords:', 'softworld-ai-seo'); ?></label>
+                                        <input type="text" class="ai-keywords" placeholder="<?php _e('WordPress, SEO, etc.', 'softworld-ai-seo'); ?>" style="width: 200px; margin-right: 10px;">
+                                        
+                                        <label style="display: inline-block; width: 40px; font-size: 12px;"><?php _e('Tone:', 'softworld-ai-seo'); ?></label>
+                                        <select class="ai-tone" style="width: 120px;">
+                                            <option value="professional" <?php selected($default_tone, 'professional'); ?>><?php _e('Professional', 'softworld-ai-seo'); ?></option>
+                                            <option value="friendly" <?php selected($default_tone, 'friendly'); ?>><?php _e('Friendly', 'softworld-ai-seo'); ?></option>
+                                            <option value="authoritative" <?php selected($default_tone, 'authoritative'); ?>><?php _e('Authoritative', 'softworld-ai-seo'); ?></option>
+                                            <option value="casual" <?php selected($default_tone, 'casual'); ?>><?php _e('Casual', 'softworld-ai-seo'); ?></option>
+                                            <option value="conversational" <?php selected($default_tone, 'conversational'); ?>><?php _e('Conversational', 'softworld-ai-seo'); ?></option>
+                                            <option value="engaging" <?php selected($default_tone, 'engaging'); ?>><?php _e('Engaging', 'softworld-ai-seo'); ?></option>
+                                        </select>
+                                    </div>
+                                    <button type="button" class="button button-primary ai-generate-now" data-type="title">
+                                        <?php _e('Generate Now', 'softworld-ai-seo'); ?>
+                                    </button>
+                                    <button type="button" class="button ai-cancel" style="margin-left: 5px;">
+                                        <?php _e('Cancel', 'softworld-ai-seo'); ?>
+                                    </button>
+                                </div>
+                                
+                                <div class="softworld-ai-status"></div>
+                            </div>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
 
+                    <!-- SEO Description Row -->
+                    <tr>
+                        <th scope="row">
+                            <label for="softworld_ai_seo_description"><?php _e('SEO Meta Description', 'softworld-ai-seo'); ?></label>
+                        </th>
+                        <td>
+                            <textarea id="softworld_ai_seo_description" 
+                                    name="softworld_ai_seo_description" 
+                                    rows="3" 
+                                    style="width: 100%; margin-bottom: 5px;"
+                                    maxlength="160"
+                                    placeholder="<?php _e('Enter meta description...', 'softworld-ai-seo'); ?>"><?php echo esc_textarea($seo_description); ?></textarea>
+                            
+                            <div class="char-counter" id="description-counter" style="font-size: 12px; color: #666; margin-bottom: 8px;">
+                                <span class="current"><?php echo strlen($seo_description); ?></span> / 160 characters
+                            </div>
+
+                            <?php if ($ai_available): ?>
+                            <div class="ai-controls" style="margin-bottom: 10px;">
+                                <button type="button" 
+                                        class="button button-secondary ai-generate-btn" 
+                                        data-type="description"
+                                        style="margin-right: 10px;">
+                                    <span class="dashicons dashicons-admin-generic" style="font-size: 14px; vertical-align: middle;"></span>
+                                    <?php _e('Generate Meta Description', 'softworld-ai-seo'); ?>
+                                </button>
+                                
+                                <div class="ai-options" style="display: none; margin-top: 10px; padding: 10px; background: #f9f9f9; border: 1px solid #ddd;">
+                                    <div style="margin-bottom: 8px;">
+                                        <label style="display: inline-block; width: 80px; font-size: 12px;"><?php _e('Keywords:', 'softworld-ai-seo'); ?></label>
+                                        <input type="text" class="ai-keywords" placeholder="<?php _e('WordPress, SEO, etc.', 'softworld-ai-seo'); ?>" style="width: 200px; margin-right: 10px;">
+                                        
+                                        <label style="display: inline-block; width: 40px; font-size: 12px;"><?php _e('Tone:', 'softworld-ai-seo'); ?></label>
+                                        <select class="ai-tone" style="width: 120px;">
+                                            <option value="professional" <?php selected($default_tone, 'professional'); ?>><?php _e('Professional', 'softworld-ai-seo'); ?></option>
+                                            <option value="friendly" <?php selected($default_tone, 'friendly'); ?>><?php _e('Friendly', 'softworld-ai-seo'); ?></option>
+                                            <option value="authoritative" <?php selected($default_tone, 'authoritative'); ?>><?php _e('Authoritative', 'softworld-ai-seo'); ?></option>
+                                            <option value="casual" <?php selected($default_tone, 'casual'); ?>><?php _e('Casual', 'softworld-ai-seo'); ?></option>
+                                            <option value="conversational" <?php selected($default_tone, 'conversational'); ?>><?php _e('Conversational', 'softworld-ai-seo'); ?></option>
+                                            <option value="engaging" <?php selected($default_tone, 'engaging'); ?>><?php _e('Engaging', 'softworld-ai-seo'); ?></option>
+                                        </select>
+                                    </div>
+                                    <button type="button" class="button button-primary ai-generate-now" data-type="description">
+                                        <?php _e('Generate Now', 'softworld-ai-seo'); ?>
+                                    </button>
+                                    <button type="button" class="button ai-cancel" style="margin-left: 5px;">
+                                        <?php _e('Cancel', 'softworld-ai-seo'); ?>
+                                    </button>
+                                </div>
+                                
+                                <div class="softworld-ai-status"></div>
+                            </div>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+
+                    <!-- Additional SEO Fields -->
+                    <tr>
+                        <th scope="row">
+                            <label for="softworld_ai_seo_focus_keyword"><?php _e('Focus Keyword', 'softworld-ai-seo'); ?></label>
+                        </th>
+                        <td>
+                            <input type="text" 
+                                id="softworld_ai_seo_focus_keyword" 
+                                name="softworld_ai_seo_focus_keyword" 
+                                value="<?php echo esc_attr($focus_keyword); ?>" 
+                                class="regular-text" 
+                                style="width: 100%;"
+                                placeholder="<?php _e('Enter focus keyword...', 'softworld-ai-seo'); ?>" />
+                            <p class="description"><?php _e('Primary keyword for this content', 'softworld-ai-seo'); ?></p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <th scope="row">
+                            <label for="softworld_ai_seo_meta_keywords"><?php _e('Meta Keywords', 'softworld-ai-seo'); ?></label>
+                        </th>
+                        <td>
+                            <input type="text" 
+                                id="softworld_ai_seo_meta_keywords" 
+                                name="softworld_ai_seo_meta_keywords" 
+                                value="<?php echo esc_attr($meta_keywords); ?>" 
+                                class="regular-text" 
+                                style="width: 100%;"
+                                placeholder="<?php _e('keyword1, keyword2, keyword3...', 'softworld-ai-seo'); ?>" />
+                            <p class="description"><?php _e('Comma-separated keywords (optional)', 'softworld-ai-seo'); ?></p>
+                        </td>
+                    </tr>
+
+                    <!-- Preview Row -->
+                    <tr>
+                        <th scope="row"><?php _e('Search Preview', 'softworld-ai-seo'); ?></th>
+                        <td>
+                            <div id="seo-preview" style="background: #fff; border: 1px solid #ddd; padding: 15px; border-radius: 3px; font-family: Arial, sans-serif;">
+                                <div class="preview-url" style="color: #006621; font-size: 14px; margin-bottom: 2px;">
+                                    <?php echo esc_url(get_permalink($post->ID) ?: home_url('/')); ?>
+                                </div>
+                                <div class="preview-title" style="color: #1a73e8; font-size: 18px; margin-bottom: 2px; text-decoration: underline; cursor: pointer;">
+                                    <?php echo esc_html($seo_title ?: $post->post_title ?: 'Your SEO Title Here'); ?>
+                                </div>
+                                <div class="preview-description" style="color: #545454; font-size: 13px; line-height: 1.4;">
+                                    <?php echo esc_html($seo_description ?: 'Your meta description will appear here...'); ?>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <?php if ($ai_available): ?>
+                    <!-- Quick AI Actions -->
+                    <tr>
+                        <th scope="row"><?php _e('Quick Actions', 'softworld-ai-seo'); ?></th>
+                        <td>
+                            <div class="softworld-quick-actions">
+                                <button type="button" class="button button-secondary softworld-generate-both">
+                                    <span class="dashicons dashicons-admin-generic" style="font-size: 14px; vertical-align: middle;"></span>
+                                    <?php _e('Generate Both Title & Description', 'softworld-ai-seo'); ?>
+                                </button>
+                                
+                                <div class="softworld-ai-bulk-settings" style="display: none; margin-top: 10px; padding: 10px; background: #f6f7f7; border: 1px solid #c3c4c7; border-radius: 4px;">
+                                    <div style="margin-bottom: 10px;">
+                                        <label style="display: inline-block; width: 80px; font-size: 12px;"><?php _e('Keywords:', 'softworld-ai-seo'); ?></label>
+                                        <input type="text" class="softworld-bulk-keywords" placeholder="<?php _e('Optional keywords...', 'softworld-ai-seo'); ?>" style="width: 200px; margin-right: 10px;">
+                                        
+                                        <label style="display: inline-block; width: 40px; font-size: 12px;"><?php _e('Tone:', 'softworld-ai-seo'); ?></label>
+                                        <select class="softworld-bulk-tone" style="width: 120px;">
+                                            <option value="professional"><?php _e('Professional', 'softworld-ai-seo'); ?></option>
+                                            <option value="casual"><?php _e('Casual', 'softworld-ai-seo'); ?></option>
+                                            <option value="friendly"><?php _e('Friendly', 'softworld-ai-seo'); ?></option>
+                                            <option value="authoritative"><?php _e('Authoritative', 'softworld-ai-seo'); ?></option>
+                                            <option value="conversational"><?php _e('Conversational', 'softworld-ai-seo'); ?></option>
+                                            <option value="engaging"><?php _e('Engaging', 'softworld-ai-seo'); ?></option>
+                                        </select>
+                                    </div>
+                                    <button type="button" class="button-primary softworld-generate-both-now">
+                                        <?php _e('Generate Both', 'softworld-ai-seo'); ?>
+                                    </button>
+                                    <button type="button" class="button softworld-cancel-bulk" style="margin-left: 5px;">
+                                        <?php _e('Cancel', 'softworld-ai-seo'); ?>
+                                    </button>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+
+            <div id="ai-message" style="margin: 10px 0; display: none;"></div>
         </div>
 
-        <style>
-        .softworld-seo-meta-box {
-            padding: 0;
-        }
-        
-        .softworld-field-group {
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #f0f0f1;
-        }
-        
-        .softworld-field-group:last-child {
-            border-bottom: none;
-            margin-bottom: 0;
-        }
-        
-        .softworld-field-label {
-            display: block;
-            margin-bottom: 8px;
-            color: #1d2327;
-        }
-        
-        .softworld-field-label strong {
-            font-size: 14px;
-        }
-        
-        .softworld-field-description {
-            display: block;
-            font-size: 12px;
-            color: #646970;
-            font-weight: normal;
-            margin-top: 2px;
-        }
-        
-        .softworld-seo-input,
-        .softworld-seo-textarea {
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-        
-        .softworld-seo-input:focus,
-        .softworld-seo-textarea:focus {
-            border-color: #0073aa;
-            box-shadow: 0 0 0 1px #0073aa;
-            outline: none;
-        }
-        
-        .softworld-char-counter {
-            margin-top: 5px;
-            font-size: 12px;
-            color: #646970;
-            text-align: right;
-        }
-        
-        .softworld-char-counter .current {
-            font-weight: bold;
-        }
-        
-        .softworld-char-counter.optimal .current {
-            color: #00a32a;
-        }
-        
-        .softworld-char-counter.warning .current {
-            color: #dba617;
-        }
-        
-        .softworld-char-counter.error .current {
-            color: #d63638;
-        }
-        
-        .softworld-ai-controls {
-            margin-top: 10px;
-            padding: 15px;
-            background: #f6f7f7;
-            border-radius: 4px;
-            border-left: 4px solid #0073aa;
-        }
-        
-        .softworld-ai-generate {
-            background: #0073aa !important;
-            color: white !important;
-            border: none !important;
-            padding: 8px 16px !important;
-            border-radius: 3px !important;
-            cursor: pointer;
-        }
-        
-        .softworld-ai-generate:hover {
-            background: #005a87 !important;
-        }
-        
-        .softworld-ai-generate .dashicons {
-            font-size: 16px;
-            width: 16px;
-            height: 16px;
-            margin-right: 5px;
-        }
-        
-        .softworld-ai-options {
-            margin-top: 15px;
-            padding: 15px;
-            background: white;
-            border: 1px solid #c3c4c7;
-            border-radius: 4px;
-        }
-        
-        .softworld-ai-options-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 15px;
-        }
-        
-        .ai-option label {
-            display: block;
-            font-weight: 500;
-            margin-bottom: 5px;
-            color: #1d2327;
-        }
-        
-        .ai-option input,
-        .ai-option select {
-            width: 100%;
-            padding: 6px 10px;
-            border: 1px solid #c3c4c7;
-            border-radius: 3px;
-        }
-        
-        .ai-action-buttons {
-            display: flex;
-            gap: 10px;
-        }
-        
-        .softworld-ai-status {
-            margin-top: 10px;
-            padding: 8px 12px;
-            border-radius: 3px;
-            display: none;
-        }
-        
-        .softworld-ai-status.loading {
-            background: #e7f3ff;
-            border-left: 4px solid #0073aa;
-            color: #0073aa;
-            display: block;
-        }
-        
-        .softworld-ai-status.success {
-            background: #edfaef;
-            border-left: 4px solid #00a32a;
-            color: #00a32a;
-            display: block;
-        }
-        
-        .softworld-ai-status.error {
-            background: #fcf0f1;
-            border-left: 4px solid #d63638;
-            color: #d63638;
-            display: block;
-        }
-        
-        .softworld-ai-status.warning {
-            background: #fcf9e8;
-            border-left: 4px solid #dba617;
-            color: #dba617;
-            display: block;
-        }
-        
-        .softworld-seo-preview {
-            padding: 15px;
-            background: white;
-            border: 1px solid #c3c4c7;
-            border-radius: 4px;
-            font-family: Arial, sans-serif;
-        }
-        
-        .preview-url {
-            color: #1a0dab;
-            font-size: 14px;
-            margin-bottom: 2px;
-        }
-        
-        .preview-title {
-            color: #1a0dab;
-            font-size: 18px;
-            font-weight: normal;
-            margin-bottom: 2px;
-            cursor: pointer;
-            text-decoration: underline;
-        }
-        
-        .preview-description {
-            color: #545454;
-            font-size: 13px;
-            line-height: 1.4;
-        }
-        
-        .softworld-quick-actions {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        
-        .softworld-generate-both {
-            align-self: flex-start;
-        }
-        
-        .softworld-ai-bulk-settings {
-            padding: 15px;
-            background: #f6f7f7;
-            border: 1px solid #c3c4c7;
-            border-radius: 4px;
-        }
-        
-        .softworld-ai-bulk-settings label {
-            display: block;
-            margin-bottom: 10px;
-        }
-        
-        .softworld-ai-bulk-settings input,
-        .softworld-ai-bulk-settings select {
-            margin-left: 8px;
-            min-width: 150px;
-        }
-        </style>
+        <script>
+        jQuery(document).ready(function($) {
+            // Prevent multiple initializations
+            if (window.softworldSEOInitialized) {
+                return;
+            }
+            window.softworldSEOInitialized = true;
+
+            // Character counters
+            function updateCounter(input, counter) {
+                const length = input.val().length;
+                const limit = input.attr('maxlength') || (input.attr('id').includes('title') ? 60 : 160);
+                const currentSpan = counter.find('.current');
+                
+                currentSpan.text(length);
+                
+                // Color coding
+                if (length > limit) {
+                    counter.css('color', '#dc3232');
+                } else if ((input.attr('id').includes('title') && length >= 50 && length <= 60) || 
+                        (input.attr('id').includes('description') && length >= 150 && length <= 160)) {
+                    counter.css('color', '#46b450');
+                } else {
+                    counter.css('color', '#666');
+                }
+            }
+
+            // Update preview
+            function updatePreview() {
+                const title = $('#softworld_ai_seo_title').val() || '<?php echo esc_js($post->post_title ?: "Your SEO Title Here"); ?>';
+                const description = $('#softworld_ai_seo_description').val() || 'Your meta description will appear here...';
+                
+                $('#seo-preview .preview-title').text(title);
+                $('#seo-preview .preview-description').text(description);
+            }
+
+            // Bind events
+            $('#softworld_ai_seo_title').on('input', function() {
+                updateCounter($(this), $('#title-counter'));
+                updatePreview();
+            });
+
+            $('#softworld_ai_seo_description').on('input', function() {
+                updateCounter($(this), $('#description-counter'));
+                updatePreview();
+            });
+
+            // Initialize counters
+            updateCounter($('#softworld_ai_seo_title'), $('#title-counter'));
+            updateCounter($('#softworld_ai_seo_description'), $('#description-counter'));
+
+            <?php if ($ai_available): ?>
+            // AI Generation
+            $('.ai-generate-btn').click(function() {
+                const button = $(this);
+                const options = button.siblings('.ai-options');
+                
+                // Hide all other options first
+                $('.ai-options, .softworld-ai-bulk-settings').not(options).slideUp();
+                
+                // Toggle current options
+                options.slideToggle();
+            });
+
+            $('.softworld-generate-both').click(function() {
+                const settings = $('.softworld-ai-bulk-settings');
+                $('.ai-options').slideUp();
+                settings.slideToggle();
+            });
+
+            $('.ai-cancel, .softworld-cancel-bulk').click(function() {
+                $(this).closest('.ai-options, .softworld-ai-bulk-settings').slideUp();
+            });
+
+            $('.ai-generate-now').click(function() {
+                const button = $(this);
+                const type = button.data('type');
+                const container = button.closest('.ai-controls');
+                const keywords = container.find('.ai-keywords').val();
+                const tone = container.find('.ai-tone').val();
+                
+                generateAI(type, keywords, tone, button, container);
+            });
+
+            $('.softworld-generate-both-now').click(function() {
+                const button = $(this);
+                const container = button.closest('.softworld-quick-actions');
+                const keywords = container.find('.softworld-bulk-keywords').val();
+                const tone = container.find('.softworld-bulk-tone').val();
+                
+                generateAI('both', keywords, tone, button, container);
+            });
+
+            function generateAI(type, keywords, tone, button, container) {
+                // Get content
+                let content = '<?php echo esc_js($post->post_title); ?>';
+                
+                if (typeof tinymce !== 'undefined' && tinymce.get('content')) {
+                    content += '\\n\\n' + tinymce.get('content').getContent({format: 'text'});
+                } else if ($('#content').length) {
+                    content += '\\n\\n' + $('#content').val();
+                } else {
+                    content += '\\n\\n<?php echo esc_js(wp_strip_all_tags($post->post_content)); ?>';
+                }
+
+                if (!content.trim()) {
+                    showMessage('<?php _e("Please add some content to your post first.", "softworld-ai-seo"); ?>', 'error');
+                    return;
+                }
+
+                // Show loading
+                const originalText = button.text();
+                button.prop('disabled', true).text('<?php _e("Generating...", "softworld-ai-seo"); ?>');
+
+                const ajaxAction = type === 'both' ? 'softworld_generate_seo_both' : 'softworld_generate_seo_' + type;
+
+                $.post(ajaxurl, {
+                    action: ajaxAction,
+                    nonce: '<?php echo wp_create_nonce("softworld_ai_seo_nonce"); ?>',
+                    content: content,
+                    post_type: '<?php echo esc_js($post->post_type); ?>',
+                    target_keywords: keywords,
+                    tone: tone
+                })
+                .done(function(response) {
+                    if (response.success) {
+                        if (type === 'both') {
+                            if (response.data.title) {
+                                $('#softworld_ai_seo_title').val(response.data.title).trigger('input');
+                            }
+                            if (response.data.description) {
+                                $('#softworld_ai_seo_description').val(response.data.description).trigger('input');
+                            }
+                            showMessage('<?php _e("Generated successfully!", "softworld-ai-seo"); ?>', 'success');
+                        } else {
+                            const result = response.data[type] || response.data.title || response.data.description;
+                            $('#softworld_ai_seo_' + type).val(result).trigger('input');
+                            showMessage('<?php _e("Generated successfully!", "softworld-ai-seo"); ?>', 'success');
+                        }
+                        container.find('.ai-options, .softworld-ai-bulk-settings').slideUp();
+                    } else {
+                        showMessage(response.data || '<?php _e("Generation failed", "softworld-ai-seo"); ?>', 'error');
+                    }
+                })
+                .fail(function() {
+                    showMessage('<?php _e("Network error occurred", "softworld-ai-seo"); ?>', 'error');
+                })
+                .always(function() {
+                    button.prop('disabled', false).text(originalText);
+                });
+            }
+
+            function showMessage(message, type) {
+                const messageDiv = $('#ai-message');
+                const className = type === 'error' ? 'notice-error' : 'notice-success';
+                messageDiv.html('<div class="notice ' + className + '" style="padding: 8px 12px;"><p>' + message + '</p></div>')
+                        .show()
+                        .delay(5000)
+                        .fadeOut();
+            }
+            <?php endif; ?>
+        });
+        </script>
         <?php
     }
-
     /**
      * Save meta box data
      */
@@ -570,72 +517,70 @@ class Softworld_Enhanced_Meta_Boxes
             return;
         }
 
-        // Enqueue the AI admin script
-        wp_enqueue_script(
-            'softworld-ai-seo-admin',
-            plugin_dir_url(__FILE__) . '../assets/js/ai-admin.js',
-            ['jquery'],
-            '1.0.0',
-            true
-        );
+        // // Enqueue the AI admin script
+        // wp_enqueue_script(
+        //     'softworld-ai-seo-admin',
+        //     plugin_dir_url(__FILE__) . '../assets/js/ai-admin.js',
+        //     ['jquery'],
+        //     '1.0.0',
+        //     true
+        // );
 
-        // Localize script with data
-        wp_localize_script('softworld-ai-seo-admin', 'softworldAISettings', [
-            'nonce' => wp_create_nonce('softworld_ai_seo_nonce'),
-            'ajax_url' => admin_url('admin-ajax.php'),
-            'post_id' => $post->ID,
-            'post_type' => $post->post_type,
-            'autoGenerate' => get_option('softworld_ai_seo_enable_auto_generation', 0),
-            'i18n' => [
-                'generating' => __('Generating...', 'softworld-ai-seo'),
-                'generated' => __('Generated successfully!', 'softworld-ai-seo'),
-                'error' => __('Error occurred', 'softworld-ai-seo'),
-                'content_required' => __('Please add some content first.', 'softworld-ai-seo'),
-                'ai_unavailable' => __('AI features are not available.', 'softworld-ai-seo')
-            ]
-        ]);
+        // // Localize script with data
+        // wp_localize_script('softworld-ai-seo-admin', 'softworldAISettings', [
+        //     'nonce' => wp_create_nonce('softworld_ai_seo_nonce'),
+        //     'ajax_url' => admin_url('admin-ajax.php'),
+        //     'post_id' => $post->ID,
+        //     'post_type' => $post->post_type,
+        //     'autoGenerate' => get_option('softworld_ai_seo_enable_auto_generation', 0),
+        //     'i18n' => [
+        //         'generating' => __('Generating...', 'softworld-ai-seo'),
+        //         'generated' => __('Generated successfully!', 'softworld-ai-seo'),
+        //         'error' => __('Error occurred', 'softworld-ai-seo'),
+        //         'content_required' => __('Please add some content first.', 'softworld-ai-seo'),
+        //         'ai_unavailable' => __('AI features are not available.', 'softworld-ai-seo')
+        //     ]
+        // ]);
 
-        // Add inline script for real-time preview updates
-        wp_add_inline_script('softworld-ai-seo-admin', '
-            jQuery(document).ready(function($) {
-                // Update preview when fields change
-                $("#softworld_ai_seo_title").on("input", function() {
-                    const value = $(this).val() || $("#title").val() || "Your SEO Title";
-                    $("#preview-title").text(value);
-                    
-                    // Update character counter
-                    updateCharCounter($(this), 60);
-                });
-                
-                $("#softworld_ai_seo_description").on("input", function() {
-                    const value = $(this).val() || "Your meta description will appear here...";
-                    $("#preview-description").text(value);
-                    
-                    // Update character counter
-                    updateCharCounter($(this), 160, 150);
-                });
-                
-                // Character counter function
-                function updateCharCounter($field, max, optimalMin) {
-                    const $counter = $field.siblings(".softworld-char-counter");
-                    const length = $field.val().length;
-                    
-                    $counter.find(".current").text(length);
-                    $counter.removeClass("optimal warning error");
-                    
-                    if (optimalMin && length >= optimalMin && length <= max) {
-                        $counter.addClass("optimal");
-                    } else if (length > max * 0.8) {
-                        $counter.addClass("warning");
-                    } else if (length > max) {
-                        $counter.addClass("error");
-                    }
-                }
-                
-                // Initialize counters
-                $("#softworld_ai_seo_title").trigger("input");
-                $("#softworld_ai_seo_description").trigger("input");
-            });
+        // Add enhanced CSS for table layout
+        wp_add_inline_style('wp-admin', '
+            .softworld-meta-box-container .form-table th {
+                width: 150px;
+                vertical-align: top;
+                padding-top: 15px;
+            }
+            
+            .softworld-meta-box-container .form-table td {
+                padding-top: 10px;
+            }
+            
+            .softworld-ai-status {
+                margin-top: 10px;
+                padding: 8px 12px;
+                border-radius: 3px;
+                display: none;
+            }
+            
+            .softworld-ai-status.loading {
+                background: #e7f3ff;
+                border-left: 4px solid #0073aa;
+                color: #0073aa;
+                display: block;
+            }
+            
+            .softworld-ai-status.success {
+                background: #edfaef;
+                border-left: 4px solid #00a32a;
+                color: #00a32a;
+                display: block;
+            }
+            
+            .softworld-ai-status.error {
+                background: #fcf0f1;
+                border-left: 4px solid #d63638;
+                color: #d63638;
+                display: block;
+            }
         ');
     }
 
