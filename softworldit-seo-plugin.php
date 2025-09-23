@@ -90,7 +90,7 @@ class Softworld_AI_SEO_Plugin
         if (is_multisite()) {
             $this->multisite_manager = new Softworld_AI_SEO_Multisite_Network_Manager('softworld-ai-seo');
         }
-
+        
         add_action('init', array($this, 'init'));
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
         add_action('admin_enqueue_scripts', array($this, 'admin_enqueue_scripts'));
@@ -833,6 +833,22 @@ class Softworld_AI_SEO_Plugin
         <div class="softworld-meta-box-container">
             <table class="form-table" style="margin: 0;">
                 <tbody>
+                    <?php if (!$ai_available): ?>
+                    <tr>
+                        <th scope="row"><?php _e('Warning', 'softworld-ai-seo'); ?></th>
+                        <td>
+                            <div style="background-color:#fff3cd; border:1px solid #ffeeba; color:#856404; padding:12px; border-radius:6px; margin:10px 0;">
+                                <p style="margin:0;">
+                                    <?php _e('AI features are not available. Please configure your OpenAI API key in', 'softworld-ai-seo'); ?> 
+                                    <a href="<?php echo admin_url('admin.php?page=softworldit-seo-settings'); ?>" style="color:#856404; font-weight:bold; text-decoration:underline;">
+                                        <?php _e('AI Settings', 'softworld-ai-seo'); ?>
+                                    </a>.
+                                </p>
+                            </div>
+                        </td>
+                    </tr>
+                    <?php endif; ?>
+
                     <!-- SEO Title Row -->
                     <tr>
                         <th scope="row">
@@ -851,7 +867,7 @@ class Softworld_AI_SEO_Plugin
                             <div class="char-counter" id="title-counter" style="font-size: 12px; color: #666; margin-bottom: 8px;">
                                 <span class="current"><?php echo strlen($meta_title); ?></span> / 60 characters
                             </div>
-
+                           
                             <?php if ($ai_available): ?>
                             <div class="ai-controls" style="margin-bottom: 10px;">
                                 <button type="button" 
@@ -956,17 +972,6 @@ class Softworld_AI_SEO_Plugin
                             </div>
                         </td>
                     </tr>
-
-                    <?php if (!$ai_available): ?>
-                    <tr>
-                        <td colspan="2">
-                            <div class="notice notice-warning" style="margin: 10px 0; padding: 8px 12px;">
-                                <p><?php _e('AI features are not available. Please configure your OpenAI API key in', 'softworld-ai-seo'); ?> 
-                                <a href="<?php echo admin_url('admin.php?page=softworldit-seo-settings'); ?>"><?php _e('AI Settings', 'softworld-ai-seo'); ?></a>.</p>
-                            </div>
-                        </td>
-                    </tr>
-                    <?php endif; ?>
                 </tbody>
             </table>
 

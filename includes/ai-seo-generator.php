@@ -19,7 +19,7 @@ class Softworld_AI_SEO_Generator
     public function __construct()
     {
         // Get settings from options
-        $this->api_key = get_option('softworld_ai_seo_openai_api_key', '');
+        $this->api_key = get_option('softworld_ai_seo_openai_api_key', false);
         $this->model = get_option('softworld_ai_seo_openai_model', 'gpt-3.5-turbo');
         $this->max_tokens = get_option('softworld_ai_seo_max_tokens', 150);
         $this->temperature = get_option('softworld_ai_seo_temperature', 0.7);
