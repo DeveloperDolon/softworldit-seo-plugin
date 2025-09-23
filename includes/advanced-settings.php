@@ -70,6 +70,103 @@ class Softworld_AI_SEO_Advanced_Settings
     }
 
     /**
+     * Output author SEO meta tags on author archive pages
+     */
+    public function output_author_seo_meta()
+    {
+        if (!is_author()) {
+            return;
+        }
+        
+        $settings = $this->get_settings();
+        if (!$settings['enable_author_seo']) {
+            return;
+        }
+        
+        $author_id = get_query_var('author');
+        $author = get_userdata($author_id);
+        
+        if (!$author) {
+            return;
+        }
+        
+        $seo_title = get_user_meta($author_id, '_softworld_author_seo_title', true);
+        $seo_description = get_user_meta($author_id, '_softworld_author_seo_description', true);
+        $seo_keywords = get_user_meta($author_id, '_softworld_author_seo_keywords', true);
+        $twitter = get_user_meta($author_id, '_softworld_author_twitter', true);
+        $linkedin = get_user_meta($author_id, '_softworld_author_linkedin', true);
+        
+        // Use custom SEO title if available, otherwise generate from author name
+        if (empty($seo_title) && $settings['auto_generate_author_descriptions']) {
+            $seo_title = str_replace(
+                ['{{author_name}}', '{{site_name}}'],
+                [$author->display_name, get_bloginfo('name')],
+                $settings['author_title_format']
+            );
+        }
+        
+        // Use custom description if available, otherwise use author bio
+        if (empty($seo_description) && $settings['auto_generate_author_descriptions']) {
+            $seo_description = !empty($author->description) ? wp_trim_words($author->description, 25) : '';
+        }
+        
+        // Output meta description
+        if (!empty($seo_description)) {
+            echo '<meta name="description" content="' . esc_attr($seo_description) . '">' . "\n";
+        }
+        
+        // Output keywords
+        if (!empty($seo_keywords)) {
+            echo '<meta name="keywords" content="' . esc_attr($seo_keywords) . '">' . "\n";
+        }
+        
+        // Output Open Graph tags
+        if (!empty($seo_title)) {
+            echo '<meta property="og:title" content="' . esc_attr($seo_title) . '">' . "\n";
+        }
+        
+        if (!empty($seo_description)) {
+            echo '<meta property="og:description" content="' . esc_attr($seo_description) . '">' . "\n";
+        }
+        
+        echo '<meta property="og:type" content="profile">' . "\n";
+        echo '<meta property="og:url" content="' . esc_url(get_author_posts_url($author_id)) . '">' . "\n";
+        
+        // Output author image for Open Graph if available
+        $avatar_url = get_avatar_url($author_id, ['size' => 200]);
+        if ($avatar_url) {
+            echo '<meta property="og:image" content="' . esc_url($avatar_url) . '">' . "\n";
+        }
+        
+        // Output Twitter Card tags
+        echo '<meta name="twitter:card" content="summary">' . "\n";
+        if (!empty($twitter)) {
+            // Extract Twitter handle from URL if it's a full URL
+            if (strpos($twitter, 'twitter.com/') !== false) {
+                $twitter_handle = '@' . basename(parse_url($twitter, PHP_URL_PATH));
+            } else {
+                $twitter_handle = $twitter;
+            }
+            echo '<meta name="twitter:creator" content="' . esc_attr($twitter_handle) . '">' . "\n";
+            echo '<meta name="twitter:site" content="' . esc_attr($twitter_handle) . '">' . "\n";
+        }
+        
+        // Output canonical URL for author archive
+        echo '<link rel="canonical" href="' . esc_url(get_author_posts_url($author_id)) . '">' . "\n";
+        
+        // Output Schema.org Person markup
+        if ($settings['enable_author_schema']) {
+            $this->output_author_schema($author_id, $author);
+        }
+        
+        // Output focus keywords as meta if available
+        $focus_keywords = get_user_meta($author_id, '_softworld_author_focus_keywords', true);
+        if (!empty($focus_keywords)) {
+            echo '<meta name="author_keywords" content="' . esc_attr($focus_keywords) . '">' . "\n";
+        }
+    }
+
+    /**
      * Hide specific admin columns
      */
     public function hide_admin_columns()
