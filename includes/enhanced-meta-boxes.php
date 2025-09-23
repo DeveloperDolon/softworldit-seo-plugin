@@ -526,21 +526,21 @@ class Softworld_Enhanced_Meta_Boxes
         //     true
         // );
 
-        // // Localize script with data
-        // wp_localize_script('softworld-ai-seo-admin', 'softworldAISettings', [
-        //     'nonce' => wp_create_nonce('softworld_ai_seo_nonce'),
-        //     'ajax_url' => admin_url('admin-ajax.php'),
-        //     'post_id' => $post->ID,
-        //     'post_type' => $post->post_type,
-        //     'autoGenerate' => get_option('softworld_ai_seo_enable_auto_generation', 0),
-        //     'i18n' => [
-        //         'generating' => __('Generating...', 'softworld-ai-seo'),
-        //         'generated' => __('Generated successfully!', 'softworld-ai-seo'),
-        //         'error' => __('Error occurred', 'softworld-ai-seo'),
-        //         'content_required' => __('Please add some content first.', 'softworld-ai-seo'),
-        //         'ai_unavailable' => __('AI features are not available.', 'softworld-ai-seo')
-        //     ]
-        // ]);
+        // Localize script with data
+        wp_localize_script('softworld-ai-seo-admin', 'softworldAISettings', [
+            'nonce' => wp_create_nonce('softworld_ai_seo_nonce'),
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'post_id' => $post->ID,
+            'post_type' => $post->post_type,
+            'autoGenerate' => get_option('softworld_ai_seo_enable_auto_generation', 0),
+            'i18n' => [
+                'generating' => __('Generating...', 'softworld-ai-seo'),
+                'generated' => __('Generated successfully!', 'softworld-ai-seo'),
+                'error' => __('Error occurred', 'softworld-ai-seo'),
+                'content_required' => __('Please add some content first.', 'softworld-ai-seo'),
+                'ai_unavailable' => __('AI features are not available.', 'softworld-ai-seo')
+            ]
+        ]);
 
         // Add enhanced CSS for table layout
         wp_add_inline_style('wp-admin', '
