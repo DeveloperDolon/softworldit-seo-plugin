@@ -201,6 +201,9 @@ class Softworld_AI_SEO_Plugin
             }
         });
 
+        add_action('wp_ajax_softworld_generate_faqs', [$this, 'ajax_generate_faqs']);
+        add_action('wp_ajax_softworld_generate_key_points', [$this, 'ajax_generate_key_points']);
+        add_action('wp_ajax_softworld_generate_both_faqs_points', [$this, 'ajax_generate_both_faqs_points']);
     }
 
     public function init()
@@ -291,6 +294,136 @@ class Softworld_AI_SEO_Plugin
             'exists' => $exists,
             'url' => $sitemap_url
         ];
+    }
+
+    /**
+     * AJAX handler for generating FAQs
+     */
+    public function ajax_generate_faqs()
+    {
+        check_ajax_referer('softworld_ai_seo_nonce', 'nonce');
+        
+        if (!current_user_can('edit_posts')) {
+            wp_send_json_error(__('Permission denied', 'softworld-ai-seo'));
+        }
+        
+        $content = sanitize_textarea_field($_POST['content'] ?? '');
+        $post_type = sanitize_text_field($_POST['post_type'] ?? 'post');
+        $faq_count = intval($_POST['faq_count'] ?? 5);
+        $tone = sanitize_text_field($_POST['tone'] ?? 'professional');
+        
+        if (empty($content)) {
+            wp_send_json_error(__('Content is required', 'softworld-ai-seo'));
+        }
+        
+        $result = $this->generate_ai_faqs($content, $post_type, $faq_count, $tone);
+        
+        if (is_wp_error($result)) {
+            wp_send_json_error($result->get_error_message());
+        }
+        
+        wp_send_json_success(['faqs' => $result]);
+    }
+
+    /**
+     * AJAX handler for generating key points
+     */
+    public function ajax_generate_key_points()
+    {
+        check_ajax_referer('softworld_ai_seo_nonce', 'nonce');
+        
+        if (!current_user_can('edit_posts')) {
+            wp_send_json_error(__('Permission denied', 'softworld-ai-seo'));
+        }
+        
+        $content = sanitize_textarea_field($_POST['content'] ?? '');
+        $post_type = sanitize_text_field($_POST['post_type'] ?? 'post');
+        $point_count = intval($_POST['point_count'] ?? 5);
+        $tone = sanitize_text_field($_POST['tone'] ?? 'professional');
+        
+        if (empty($content)) {
+            wp_send_json_error(__('Content is required', 'softworld-ai-seo'));
+        }
+        
+        $result = $this->generate_ai_key_points($content, $post_type, $point_count, $tone);
+        
+        if (is_wp_error($result)) {
+            wp_send_json_error($result->get_error_message());
+        }
+        
+        wp_send_json_success(['key_points' => $result]);
+    }
+
+    /**
+     * AJAX handler for generating both FAQs and key points
+     */
+    public function ajax_generate_both_faqs_points()
+    {
+        check_ajax_referer('softworld_ai_seo_nonce', 'nonce');
+        
+        if (!current_user_can('edit_posts')) {
+            wp_send_json_error(__('Permission denied', 'softworld-ai-seo'));
+        }
+        
+        $content = sanitize_textarea_field($_POST['content'] ?? '');
+        $post_type = sanitize_text_field($_POST['post_type'] ?? 'post');
+        $faq_count = intval($_POST['faq_count'] ?? 5);
+        $point_count = intval($_POST['point_count'] ?? 5);
+        $tone = sanitize_text_field($_POST['tone'] ?? 'professional');
+        
+        if (empty($content)) {
+            wp_send_json_error(__('Content is required', 'softworld-ai-seo'));
+        }
+        
+        $faqs_result = $this->generate_ai_faqs($content, $post_type, $faq_count, $tone);
+        $points_result = $this->generate_ai_key_points($content, $post_type, $point_count, $tone);
+        
+        $response = [];
+        $has_error = false;
+        
+        if (is_wp_error($faqs_result)) {
+            $response['faqs_error'] = $faqs_result->get_error_message();
+            $has_error = true;
+        } else {
+            $response['faqs'] = $faqs_result;
+        }
+        
+        if (is_wp_error($points_result)) {
+            $response['points_error'] = $points_result->get_error_message();
+            $has_error = true;
+        } else {
+            $response['key_points'] = $points_result;
+        }
+        
+        if ($has_error && empty($response['faqs']) && empty($response['key_points'])) {
+            wp_send_json_error(__('Failed to generate content', 'softworld-ai-seo'));
+        }
+        
+        wp_send_json_success($response);
+    }
+
+    /**
+     * Generate FAQs using AI
+     */
+    public function generate_ai_faqs($content, $post_type = 'post', $faq_count = 5, $tone = 'professional')
+    {
+        if (!$this->ai_generator) {
+            return new WP_Error('ai_not_available', __('AI generator not available', 'softworld-ai-seo'));
+        }
+        
+        return $this->ai_generator->generate_faqs($content, $post_type, $faq_count, $tone);
+    }
+
+    /**
+     * Generate key points using AI
+     */
+    public function generate_ai_key_points($content, $post_type = 'post', $point_count = 5, $tone = 'professional')
+    {
+        if (!$this->ai_generator) {
+            return new WP_Error('ai_not_available', __('AI generator not available', 'softworld-ai-seo'));
+        }
+        
+        return $this->ai_generator->generate_key_points($content, $post_type, $point_count, $tone);
     }
 
     public function ajax_get_advanced_stats()
@@ -832,6 +965,16 @@ class Softworld_AI_SEO_Plugin
         if (isset($_POST['softworld_ai_seo_description'])) {
             update_post_meta($post_id, '_softworld_ai_seo_description', sanitize_textarea_field($_POST['softworld_ai_seo_description']));
         }
+
+        // Save FAQs
+        if (isset($_POST['softworld_ai_seo_faqs'])) {
+            update_post_meta($post_id, '_softworld_ai_seo_faqs', wp_kses_post($_POST['softworld_ai_seo_faqs']));
+        }
+
+        // Save Key Points
+        if (isset($_POST['softworld_ai_seo_key_points'])) {
+            update_post_meta($post_id, '_softworld_ai_seo_key_points', wp_kses_post($_POST['softworld_ai_seo_key_points']));
+        }
     }
 
     private function create_custom_roles()
@@ -1222,6 +1365,14 @@ class Softworld_AI_SEO_Plugin
         wp_enqueue_style(
             'softworldit-local-seo-admin',
             plugin_dir_url(__FILE__) . 'assets/css/local-seo-admin.css',
+            [],
+            '1.0.0'
+        );
+
+        // Added AI Content Generator CSS
+        wp_enqueue_style(
+            'softworld-ai-content-generator',
+            plugin_dir_url(__FILE__) . 'assets/css/ai-content-generator.css',
             [],
             '1.0.0'
         );

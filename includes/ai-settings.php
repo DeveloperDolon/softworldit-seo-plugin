@@ -73,6 +73,26 @@ class Softworld_AI_SEO_Settings
             'softworld-ai-seo-settings'
         );
 
+        register_setting('softworld_ai_seo_settings', 'softworld_ai_seo_default_faq_count', [
+            'sanitize_callback' => 'intval',
+            'default' => 5
+        ]);
+
+        register_setting('softworld_ai_seo_settings', 'softworld_ai_seo_default_point_count', [
+            'sanitize_callback' => 'intval',
+            'default' => 5
+        ]);
+
+        register_setting('softworld_ai_seo_settings', 'softworld_ai_seo_enable_faqs', [
+            'sanitize_callback' => 'intval',
+            'default' => 1
+        ]);
+
+        register_setting('softworld_ai_seo_settings', 'softworld_ai_seo_enable_key_points', [
+            'sanitize_callback' => 'intval',
+            'default' => 1
+        ]);
+
         // Add settings fields
         $this->add_settings_fields();
     }
@@ -131,6 +151,74 @@ class Softworld_AI_SEO_Settings
             'softworld-ai-seo-settings',
             'softworld_ai_generation_settings'
         );
+
+        add_settings_field(
+            'softworld_ai_seo_enable_faqs',
+            __('Enable FAQ Generation', 'softworld-ai-seo'),
+            [$this, 'enable_faqs_field'],
+            'softworld-ai-seo-settings',
+            'softworld_ai_generation_settings'
+        );
+
+        add_settings_field(
+            'softworld_ai_seo_enable_key_points',
+            __('Enable Key Points', 'softworld-ai-seo'),
+            [$this, 'enable_key_points_field'],
+            'softworld-ai-seo-settings',
+            'softworld_ai_generation_settings'
+        );
+
+        add_settings_field(
+            'softworld_ai_seo_default_faq_count',
+            __('Default FAQ Count', 'softworld-ai-seo'),
+            [$this, 'default_faq_count_field'],
+            'softworld-ai-seo-settings',
+            'softworld_ai_generation_settings'
+        );
+
+        add_settings_field(
+            'softworld_ai_seo_default_point_count',
+            __('Default Key Points Count', 'softworld-ai-seo'),
+            [$this, 'default_point_count_field'],
+            'softworld-ai-seo-settings',
+            'softworld_ai_generation_settings'
+        );
+
+    }
+
+    // Add these field methods:
+    public function enable_faqs_field()
+    {
+        $value = get_option('softworld_ai_seo_enable_faqs', 1);
+        echo '<label>';
+        echo '<input type="checkbox" id="softworld_ai_seo_enable_faqs" name="softworld_ai_seo_enable_faqs" value="1"' . checked($value, 1, false) . ' />';
+        echo ' ' . __('Enable FAQ generation in post editor', 'softworld-ai-seo');
+        echo '</label>';
+        echo '<p class="description">' . __('Allow users to generate FAQs for their content.', 'softworld-ai-seo') . '</p>';
+    }
+
+    public function enable_key_points_field()
+    {
+        $value = get_option('softworld_ai_seo_enable_key_points', 1);
+        echo '<label>';
+        echo '<input type="checkbox" id="softworld_ai_seo_enable_key_points" name="softworld_ai_seo_enable_key_points" value="1"' . checked($value, 1, false) . ' />';
+        echo ' ' . __('Enable key points extraction in post editor', 'softworld-ai-seo');
+        echo '</label>';
+        echo '<p class="description">' . __('Allow users to extract key points from their content.', 'softworld-ai-seo') . '</p>';
+    }
+
+    public function default_faq_count_field()
+    {
+        $value = get_option('softworld_ai_seo_default_faq_count', 5);
+        echo '<input type="number" id="softworld_ai_seo_default_faq_count" name="softworld_ai_seo_default_faq_count" value="' . esc_attr($value) . '" min="3" max="10" step="1" />';
+        echo '<p class="description">' . __('Default number of FAQs to generate (3-10).', 'softworld-ai-seo') . '</p>';
+    }
+
+    public function default_point_count_field()
+    {
+        $value = get_option('softworld_ai_seo_default_point_count', 5);
+        echo '<input type="number" id="softworld_ai_seo_default_point_count" name="softworld_ai_seo_default_point_count" value="' . esc_attr($value) . '" min="3" max="10" step="1" />';
+        echo '<p class="description">' . __('Default number of key points to extract (3-10).', 'softworld-ai-seo') . '</p>';
     }
 
     /**
@@ -336,6 +424,15 @@ class Softworld_AI_SEO_Settings
                                 <div class="stat-item">
                                     <span class="stat-number"><?php echo esc_html($usage_stats['bulk_generations']); ?></span>
                                     <span class="stat-label"><?php _e('Bulk Operations', 'softworld-ai-seo'); ?></span>
+                                </div>
+                                
+                                <div class="stat-item">
+                                    <span class="stat-number"><?php echo esc_html($usage_stats['faqs_generated']); ?></span>
+                                    <span class="stat-label"><?php _e('FAQs Generated', 'softworld-ai-seo'); ?></span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-number"><?php echo esc_html($usage_stats['key_points_generated']); ?></span>
+                                    <span class="stat-label"><?php _e('Key Points Generated', 'softworld-ai-seo'); ?></span>
                                 </div>
                             </div>
 
