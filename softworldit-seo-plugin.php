@@ -204,6 +204,13 @@ class Softworld_AI_SEO_Plugin
         add_action('wp_ajax_softworld_generate_faqs', [$this, 'ajax_generate_faqs']);
         add_action('wp_ajax_softworld_generate_key_points', [$this, 'ajax_generate_key_points']);
         add_action('wp_ajax_softworld_generate_both_faqs_points', [$this, 'ajax_generate_both_faqs_points']);
+
+        // AI Writing Assistant AJAX handlers
+        add_action('wp_ajax_softworld_generate_content', [$this, 'ajax_generate_content']);
+        add_action('wp_ajax_softworld_expand_content', [$this, 'ajax_expand_content']);
+        add_action('wp_ajax_softworld_rewrite_content', [$this, 'ajax_rewrite_content']);
+        add_action('wp_ajax_softworld_summarize_content', [$this, 'ajax_summarize_content']);
+        add_action('wp_ajax_softworld_generate_outline', [$this, 'ajax_generate_outline']);
     }
 
     public function init()
@@ -234,6 +241,66 @@ class Softworld_AI_SEO_Plugin
             add_action('wp_ajax_softworld_site_revoke_override', [$this, 'ajax_site_revoke_override']);
             add_action('wp_ajax_softworld_network_get_stats', [$this, 'ajax_network_get_stats']);
             add_action('wp_ajax_softworld_network_get_import_export_log', [$this, 'ajax_network_get_import_export_log']);
+        }
+    }
+
+    /**
+     * AJAX: Generate Content
+     */
+    public function ajax_generate_content()
+    {
+        if ($this->ai_generator) {
+            $this->ai_generator->ajax_generate_content();
+        } else {
+            wp_send_json_error(__('AI generator not available', 'softworld-ai-seo'));
+        }
+    }
+
+    /**
+     * AJAX: Expand Content
+     */
+    public function ajax_expand_content()
+    {
+        if ($this->ai_generator) {
+            $this->ai_generator->ajax_expand_content();
+        } else {
+            wp_send_json_error(__('AI generator not available', 'softworld-ai-seo'));
+        }
+    }
+
+    /**
+     * AJAX: Rewrite Content
+     */
+    public function ajax_rewrite_content()
+    {
+        if ($this->ai_generator) {
+            $this->ai_generator->ajax_rewrite_content();
+        } else {
+            wp_send_json_error(__('AI generator not available', 'softworld-ai-seo'));
+        }
+    }
+
+    /**
+     * AJAX: Summarize Content
+     */
+    public function ajax_summarize_content()
+    {
+        if ($this->ai_generator) {
+            $this->ai_generator->ajax_summarize_content();
+        } else {
+            wp_send_json_error(__('AI generator not available', 'softworld-ai-seo'));
+        }
+    }
+
+    /**
+     * AJAX: Generate Outline
+     */
+    public function ajax_generate_outline()
+    {
+        if ($this->ai_generator) {
+            $this->ai_generator->ajax_generate_outline();
+        } else {
+            wp_send_json_error(__('AI generator not available', 'softworld-ai-seo'));
         }
     }
 
@@ -1376,6 +1443,13 @@ class Softworld_AI_SEO_Plugin
             [],
             '1.0.0'
         );
+
+        wp_enqueue_style(
+            'softworld-writing-assistant',
+            plugin_dir_url(__FILE__) . 'assets/css/writing-assistant.css',
+            [],
+            '1.0.0'
+        );
     }
 
     public function admin_enqueue_scripts()
@@ -1545,6 +1619,39 @@ class Softworld_AI_SEO_Plugin
                 'ai_unavailable' => __('AI features are not available.', 'softworld-ai-seo')
             ]
         ]);
+
+        // Only on writing assistant page
+        $screen = get_current_screen();
+        if ($screen && $screen->id === 'softworld-seo_page_softworld-ai-writing-assistant') {
+
+            // Enqueue Writing Assistant JS
+            wp_enqueue_script(
+                'softworld-writing-assistant',
+                plugin_dir_url(__FILE__) . 'assets/js/writing-assistant.js',
+                ['jquery'],
+                '1.0.0',
+                true
+            );
+
+            // Localize script
+            wp_localize_script('softworld-writing-assistant', 'softworldWritingAssistant', [
+                'nonce' => wp_create_nonce('softworld_ai_seo_nonce'),
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'i18n' => [
+                    'topicRequired' => __('Please enter a topic', 'softworld-ai-seo'),
+                    'contentRequired' => __('Please enter content', 'softworld-ai-seo'),
+                    'generated' => __('Content generated successfully!', 'softworld-ai-seo'),
+                    'expanded' => __('Content expanded successfully!', 'softworld-ai-seo'),
+                    'rewritten' => __('Content rewritten successfully!', 'softworld-ai-seo'),
+                    'summarized' => __('Content summarized successfully!', 'softworld-ai-seo'),
+                    'outlineGenerated' => __('Outline generated successfully!', 'softworld-ai-seo'),
+                    'copied' => __('Copied to clipboard!', 'softworld-ai-seo'),
+                    'appended' => __('Content appended successfully!', 'softworld-ai-seo'),
+                    'replaced' => __('Content replaced successfully!', 'softworld-ai-seo'),
+                    'error' => __('An error occurred. Please try again.', 'softworld-ai-seo')
+                ]
+            ]);
+        }
     }
 
     public function activate()
@@ -1799,6 +1906,27 @@ class Softworld_AI_SEO_Plugin
     }
 
     /**
+     * Render AI Writing Assistant Page
+     */
+    public function render_writing_assistant_page()
+    {
+        if (!$this->is_ai_available()) {
+            ?>
+            <div class="wrap">
+                <h1><?php _e('AI Writing Assistant', 'softworld-ai-seo'); ?></h1>
+                <div class="notice notice-error">
+                    <p><?php _e('AI features are not available. Please configure your OpenAI API key in', 'softworld-ai-seo'); ?> 
+                    <a href="<?php echo admin_url('admin.php?page=softworldit-seo-settings'); ?>"><?php _e('AI Settings', 'softworld-ai-seo'); ?></a>.</p>
+                </div>
+            </div>
+            <?php
+            return;
+        }
+        
+        include plugin_dir_path(__FILE__) . 'includes/templates/writing-assistant.php';
+    }
+
+    /**
      * Register Admin Menu
      */
     public function register_admin_menu()
@@ -1916,6 +2044,15 @@ class Softworld_AI_SEO_Plugin
             'manage_options',
             'softworld-ai-seo-404-log',
             [$this->not_found_logger, 'render_admin_page']
+        );
+
+        add_submenu_page(
+            'softworld-ai-seo',
+            __('AI Writing Assistant', 'softworld-ai-seo'),
+            __('AI Writing Assistant', 'softworld-ai-seo'),
+            'edit_posts',
+            'softworld-ai-writing-assistant',
+            array($this, 'render_writing_assistant_page')
         );
 
         add_submenu_page(

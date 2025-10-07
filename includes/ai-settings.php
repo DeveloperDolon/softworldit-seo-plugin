@@ -93,6 +93,22 @@ class Softworld_AI_SEO_Settings
             'default' => 1
         ]);
 
+        // Writing Assistant Settings
+        register_setting('softworld_ai_seo_settings', 'softworld_ai_seo_enable_writing_assistant', [
+            'sanitize_callback' => 'intval',
+            'default' => 1
+        ]);
+
+        register_setting('softworld_ai_seo_settings', 'softworld_ai_seo_default_word_count', [
+            'sanitize_callback' => 'intval',
+            'default' => 300
+        ]);
+
+        register_setting('softworld_ai_seo_settings', 'softworld_ai_seo_max_word_count', [
+            'sanitize_callback' => 'intval',
+            'default' => 2000
+        ]);
+
         // Add settings fields
         $this->add_settings_fields();
     }
@@ -184,6 +200,54 @@ class Softworld_AI_SEO_Settings
             'softworld_ai_generation_settings'
         );
 
+        add_settings_field(
+            'softworld_ai_seo_enable_writing_assistant',
+            __('Enable Writing Assistant', 'softworld-ai-seo'),
+            [$this, 'enable_writing_assistant_field'],
+            'softworld-ai-seo-settings',
+            'softworld_ai_generation_settings'
+        );
+
+        add_settings_field(
+            'softworld_ai_seo_default_word_count',
+            __('Default Word Count', 'softworld-ai-seo'),
+            [$this, 'default_word_count_field'],
+            'softworld-ai-seo-settings',
+            'softworld_ai_generation_settings'
+        );
+
+        add_settings_field(
+            'softworld_ai_seo_max_word_count',
+            __('Maximum Word Count', 'softworld-ai-seo'),
+            [$this, 'max_word_count_field'],
+            'softworld-ai-seo-settings',
+            'softworld_ai_generation_settings'
+        );
+
+    }
+
+    public function enable_writing_assistant_field()
+    {
+        $value = get_option('softworld_ai_seo_enable_writing_assistant', 1);
+        echo '<label>';
+        echo '<input type="checkbox" id="softworld_ai_seo_enable_writing_assistant" name="softworld_ai_seo_enable_writing_assistant" value="1"' . checked($value, 1, false) . ' />';
+        echo ' ' . __('Enable AI Writing Assistant feature', 'softworld-ai-seo');
+        echo '</label>';
+        echo '<p class="description">' . __('Provides advanced content generation, rewriting, and summarization tools.', 'softworld-ai-seo') . '</p>';
+    }
+
+    public function default_word_count_field()
+    {
+        $value = get_option('softworld_ai_seo_default_word_count', 300);
+        echo '<input type="number" id="softworld_ai_seo_default_word_count" name="softworld_ai_seo_default_word_count" value="' . esc_attr($value) . '" min="50" max="2000" step="50" />';
+        echo '<p class="description">' . __('Default word count for content generation (50-2000).', 'softworld-ai-seo') . '</p>';
+    }
+
+    public function max_word_count_field()
+    {
+        $value = get_option('softworld_ai_seo_max_word_count', 2000);
+        echo '<input type="number" id="softworld_ai_seo_max_word_count" name="softworld_ai_seo_max_word_count" value="' . esc_attr($value) . '" min="500" max="5000" step="100" />';
+        echo '<p class="description">' . __('Maximum word count limit for content generation (500-5000).', 'softworld-ai-seo') . '</p>';
     }
 
     // Add these field methods:
@@ -433,6 +497,23 @@ class Softworld_AI_SEO_Settings
                                 <div class="stat-item">
                                     <span class="stat-number"><?php echo esc_html($usage_stats['key_points_generated']); ?></span>
                                     <span class="stat-label"><?php _e('Key Points Generated', 'softworld-ai-seo'); ?></span>
+                                </div>
+
+                                <div class="stat-item">
+                                    <span class="stat-number"><?php echo esc_html($usage_stats['content_generations'] ?? 0); ?></span>
+                                    <span class="stat-label"><?php _e('Content Generated', 'softworld-ai-seo'); ?></span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-number"><?php echo esc_html($usage_stats['content_rewrites'] ?? 0); ?></span>
+                                    <span class="stat-label"><?php _e('Content Rewrites', 'softworld-ai-seo'); ?></span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-number"><?php echo esc_html($usage_stats['summaries_created'] ?? 0); ?></span>
+                                    <span class="stat-label"><?php _e('Summaries Created', 'softworld-ai-seo'); ?></span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-number"><?php echo esc_html($usage_stats['outlines_created'] ?? 0); ?></span>
+                                    <span class="stat-label"><?php _e('Outlines Created', 'softworld-ai-seo'); ?></span>
                                 </div>
                             </div>
 

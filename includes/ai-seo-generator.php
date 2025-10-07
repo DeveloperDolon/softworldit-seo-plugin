@@ -463,6 +463,22 @@ class Softworld_AI_SEO_Generator
             'key_points_generated' => $wpdb->get_var(
                 $wpdb->prepare("SELECT COUNT(*) FROM $table_name WHERE usage_type = 'key_points' AND usage_date >= %s", $date_from)
             ),
+            // Add these stat queries
+            'content_generations' => $wpdb->get_var(
+                $wpdb->prepare("SELECT COUNT(*) FROM $table_name WHERE usage_type = 'content_generation' AND usage_date >= %s", $date_from)
+            ),
+            'content_expansions' => $wpdb->get_var(
+                $wpdb->prepare("SELECT COUNT(*) FROM $table_name WHERE usage_type = 'content_expansion' AND usage_date >= %s", $date_from)
+            ),
+            'content_rewrites' => $wpdb->get_var(
+                $wpdb->prepare("SELECT COUNT(*) FROM $table_name WHERE usage_type = 'content_rewrite' AND usage_date >= %s", $date_from)
+            ),
+            'summaries_created' => $wpdb->get_var(
+                $wpdb->prepare("SELECT COUNT(*) FROM $table_name WHERE usage_type = 'content_summary' AND usage_date >= %s", $date_from)
+            ),
+            'outlines_created' => $wpdb->get_var(
+                $wpdb->prepare("SELECT COUNT(*) FROM $table_name WHERE usage_type = 'outline_generation' AND usage_date >= %s", $date_from)
+            ),
         ];
 
         // Get daily usage for chart
@@ -714,4 +730,509 @@ class Softworld_AI_SEO_Generator
             'count' => count($result)
         ]);
     }
+
+    /**
+ * Generate content using AI based on topic/keywords
+ */
+public function generate_content($topic, $content_type = 'paragraph', $word_count = 300, $tone = 'professional', $keywords = '')
+{
+    if (!$this->is_ai_available()) {
+        return new WP_Error('no_api_key', __('OpenAI API key is not configured', 'softworld-ai-seo'));
+    }
+
+    $prompt = $this->build_content_prompt($topic, $content_type, $word_count, $tone, $keywords);
+    $max_tokens = $this->calculate_tokens_for_words($word_count);
+    
+    $result = $this->make_openai_request($prompt, $max_tokens);
+
+    if (is_wp_error($result)) {
+        return $result;
+    }
+
+    // Log the generation
+    $this->log_ai_usage('content_generation', strlen($topic), $content_type);
+
+    return trim($result);
+}
+
+/**
+ * Expand existing content
+ */
+public function expand_content($existing_content, $expansion_type = 'elaborate', $word_count = 200, $tone = 'professional')
+{
+    if (!$this->is_ai_available()) {
+        return new WP_Error('no_api_key', __('OpenAI API key is not configured', 'softworld-ai-seo'));
+    }
+
+    $prompt = $this->build_expansion_prompt($existing_content, $expansion_type, $word_count, $tone);
+    $max_tokens = $this->calculate_tokens_for_words($word_count);
+    
+    $result = $this->make_openai_request($prompt, $max_tokens);
+
+    if (is_wp_error($result)) {
+        return $result;
+    }
+
+    $this->log_ai_usage('content_expansion', strlen($existing_content), $expansion_type);
+
+    return trim($result);
+}
+
+/**
+ * Rewrite/rephrase content
+ */
+public function rewrite_content($content, $rewrite_style = 'improve', $tone = 'professional')
+{
+    if (!$this->is_ai_available()) {
+        return new WP_Error('no_api_key', __('OpenAI API key is not configured', 'softworld-ai-seo'));
+    }
+
+    $prompt = $this->build_rewrite_prompt($content, $rewrite_style, $tone);
+    $max_tokens = $this->calculate_tokens_for_content($content);
+    
+    $result = $this->make_openai_request($prompt, $max_tokens);
+
+    if (is_wp_error($result)) {
+        return $result;
+    }
+
+    $this->log_ai_usage('content_rewrite', strlen($content), $rewrite_style);
+
+    return trim($result);
+}
+
+/**
+ * Summarize content
+ */
+public function summarize_content($content, $summary_length = 'short', $format = 'paragraph')
+{
+    if (!$this->is_ai_available()) {
+        return new WP_Error('no_api_key', __('OpenAI API key is not configured', 'softworld-ai-seo'));
+    }
+
+    $prompt = $this->build_summary_prompt($content, $summary_length, $format);
+    
+    $max_tokens = 300;
+    if ($summary_length === 'long') $max_tokens = 500;
+    if ($summary_length === 'short') $max_tokens = 150;
+    
+    $result = $this->make_openai_request($prompt, $max_tokens);
+
+    if (is_wp_error($result)) {
+        return $result;
+    }
+
+    $this->log_ai_usage('content_summary', strlen($content), $summary_length);
+
+    return trim($result);
+}
+
+/**
+ * Generate outline for content
+ */
+public function generate_outline($topic, $sections = 5, $detail_level = 'detailed')
+{
+    if (!$this->is_ai_available()) {
+        return new WP_Error('no_api_key', __('OpenAI API key is not configured', 'softworld-ai-seo'));
+    }
+
+    $prompt = $this->build_outline_prompt($topic, $sections, $detail_level);
+    $result = $this->make_openai_request($prompt, 400);
+
+    if (is_wp_error($result)) {
+        return $result;
+    }
+
+    $this->log_ai_usage('outline_generation', strlen($topic), 'outline');
+
+    return $this->parse_outline_response($result);
+}
+
+/**
+ * Build content generation prompt
+ */
+private function build_content_prompt($topic, $content_type, $word_count, $tone, $keywords)
+{
+    $prompt = "You are a professional content writer. Generate high-quality content based on the following specifications.\n\n";
+    $prompt .= "Topic: " . $topic . "\n";
+    $prompt .= "Content Type: " . ucfirst($content_type) . "\n";
+    $prompt .= "Target Word Count: Approximately " . $word_count . " words\n";
+    $prompt .= "Tone: " . ucfirst($tone) . "\n";
+    
+    if (!empty($keywords)) {
+        $prompt .= "Keywords to Include: " . $keywords . "\n";
+    }
+    
+    $prompt .= "\nRequirements:\n";
+    $prompt .= "- Write engaging, original content\n";
+    $prompt .= "- Maintain the specified tone throughout\n";
+    $prompt .= "- Include relevant keywords naturally if provided\n";
+    $prompt .= "- Make it reader-friendly and informative\n";
+    $prompt .= "- Use proper grammar and formatting\n";
+    
+    if ($content_type === 'blog_post') {
+        $prompt .= "- Structure with introduction, body paragraphs, and conclusion\n";
+        $prompt .= "- Add subheadings where appropriate\n";
+    } elseif ($content_type === 'product_description') {
+        $prompt .= "- Highlight key features and benefits\n";
+        $prompt .= "- Include a compelling call-to-action\n";
+    }
+    
+    $prompt .= "\nGenerate the content now:";
+    
+    return $prompt;
+}
+
+/**
+ * Build expansion prompt
+ */
+private function build_expansion_prompt($existing_content, $expansion_type, $word_count, $tone)
+{
+    $content_excerpt = $this->extract_content_excerpt($existing_content, 800);
+    
+    $prompt = "You are a professional content writer. Expand the following content.\n\n";
+    $prompt .= "Existing Content: " . $content_excerpt . "\n";
+    $prompt .= "Expansion Style: " . ucfirst($expansion_type) . "\n";
+    $prompt .= "Additional Words Needed: Approximately " . $word_count . " words\n";
+    $prompt .= "Tone: " . ucfirst($tone) . "\n\n";
+    
+    $prompt .= "Requirements:\n";
+    
+    if ($expansion_type === 'elaborate') {
+        $prompt .= "- Add more details and explanations to the existing points\n";
+        $prompt .= "- Provide examples and evidence where appropriate\n";
+    } elseif ($expansion_type === 'add_examples') {
+        $prompt .= "- Add relevant examples to illustrate the points\n";
+        $prompt .= "- Use real-world scenarios\n";
+    } elseif ($expansion_type === 'add_context') {
+        $prompt .= "- Provide background information and context\n";
+        $prompt .= "- Explain the significance and implications\n";
+    }
+    
+    $prompt .= "- Maintain consistency with the original content\n";
+    $prompt .= "- Keep the same tone and style\n";
+    $prompt .= "- Ensure smooth transitions\n\n";
+    $prompt .= "Generate the expanded content:";
+    
+    return $prompt;
+}
+
+/**
+ * Build rewrite prompt
+ */
+private function build_rewrite_prompt($content, $rewrite_style, $tone)
+{
+    $content_excerpt = $this->extract_content_excerpt($content, 1000);
+    
+    $prompt = "You are a professional content editor. Rewrite the following content.\n\n";
+    $prompt .= "Original Content: " . $content_excerpt . "\n";
+    $prompt .= "Rewrite Style: " . ucfirst($rewrite_style) . "\n";
+    $prompt .= "Tone: " . ucfirst($tone) . "\n\n";
+    
+    $prompt .= "Requirements:\n";
+    
+    if ($rewrite_style === 'improve') {
+        $prompt .= "- Enhance clarity and readability\n";
+        $prompt .= "- Fix any grammar or style issues\n";
+        $prompt .= "- Maintain the original meaning\n";
+    } elseif ($rewrite_style === 'simplify') {
+        $prompt .= "- Use simpler language and shorter sentences\n";
+        $prompt .= "- Make it more accessible to general readers\n";
+        $prompt .= "- Remove jargon where possible\n";
+    } elseif ($rewrite_style === 'professional') {
+        $prompt .= "- Use more formal and professional language\n";
+        $prompt .= "- Enhance credibility and authority\n";
+        $prompt .= "- Use industry-appropriate terminology\n";
+    } elseif ($rewrite_style === 'casual') {
+        $prompt .= "- Use conversational and friendly language\n";
+        $prompt .= "- Make it more approachable\n";
+        $prompt .= "- Use contractions and informal expressions where appropriate\n";
+    }
+    
+    $prompt .= "- Preserve the core message and key points\n";
+    $prompt .= "- Maintain similar length to the original\n\n";
+    $prompt .= "Generate the rewritten content:";
+    
+    return $prompt;
+}
+
+/**
+ * Build summary prompt
+ */
+private function build_summary_prompt($content, $summary_length, $format)
+{
+    $content_excerpt = $this->extract_content_excerpt($content, 2000);
+    
+    $prompt = "You are a professional content summarizer. Create a summary of the following content.\n\n";
+    $prompt .= "Content: " . $content_excerpt . "\n";
+    $prompt .= "Summary Length: " . ucfirst($summary_length) . "\n";
+    $prompt .= "Format: " . ucfirst($format) . "\n\n";
+    
+    $prompt .= "Requirements:\n";
+    
+    if ($summary_length === 'short') {
+        $prompt .= "- Keep it very concise (2-3 sentences)\n";
+    } elseif ($summary_length === 'medium') {
+        $prompt .= "- Create a moderate summary (1 paragraph)\n";
+    } else {
+        $prompt .= "- Create a comprehensive summary (2-3 paragraphs)\n";
+    }
+    
+    if ($format === 'bullet_points') {
+        $prompt .= "- Format as bullet points\n";
+        $prompt .= "- Each point should be a key takeaway\n";
+    } else {
+        $prompt .= "- Format as flowing paragraph(s)\n";
+    }
+    
+    $prompt .= "- Capture the main ideas and key points\n";
+    $prompt .= "- Maintain the essence of the original content\n\n";
+    $prompt .= "Generate the summary now:";
+    
+    return $prompt;
+}
+
+/**
+ * Build outline prompt
+ */
+private function build_outline_prompt($topic, $sections, $detail_level)
+{
+    $prompt = "You are a professional content strategist. Create a detailed outline for the following topic.\n\n";
+    $prompt .= "Topic: " . $topic . "\n";
+    $prompt .= "Number of Main Sections: " . $sections . "\n";
+    $prompt .= "Detail Level: " . ucfirst($detail_level) . "\n\n";
+    
+    $prompt .= "Requirements:\n";
+    $prompt .= "- Create " . $sections . " main sections\n";
+    
+    if ($detail_level === 'detailed') {
+        $prompt .= "- Include 3-5 subsections under each main section\n";
+        $prompt .= "- Add brief descriptions for each point\n";
+    } elseif ($detail_level === 'basic') {
+        $prompt .= "- Include 2-3 subsections under each main section\n";
+        $prompt .= "- Keep it concise\n";
+    }
+    
+    $prompt .= "- Use hierarchical numbering (1, 1.1, 1.2, etc.)\n";
+    $prompt .= "- Ensure logical flow and structure\n";
+    $prompt .= "- Cover all important aspects of the topic\n\n";
+    $prompt .= "Format:\n";
+    $prompt .= "1. Main Section Title\n";
+    $prompt .= "   1.1 Subsection\n";
+    $prompt .= "   1.2 Subsection\n\n";
+    $prompt .= "Generate the outline now:";
+    
+    return $prompt;
+}
+
+/**
+ * Parse outline response
+ */
+private function parse_outline_response($response)
+{
+    $lines = explode("\n", trim($response));
+    $outline = [];
+    $current_section = null;
+    
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if (empty($line)) continue;
+        
+        // Main section (1., 2., 3., etc.)
+        if (preg_match('/^(\d+)\.\s*(.+)/', $line, $matches)) {
+            $current_section = $matches[1];
+            $outline[$current_section] = [
+                'title' => trim($matches[2]),
+                'subsections' => []
+            ];
+        }
+        // Subsection (1.1, 1.2, etc.)
+        elseif (preg_match('/^(\d+)\.(\d+)\s*(.+)/', $line, $matches)) {
+            $parent = $matches[1];
+            if (isset($outline[$parent])) {
+                $outline[$parent]['subsections'][] = trim($matches[3]);
+            }
+        }
+    }
+    
+    return $outline;
+}
+
+/**
+ * Calculate tokens needed for word count
+ */
+private function calculate_tokens_for_words($word_count)
+{
+    // Rough estimate: 1 token ≈ 0.75 words
+    return intval($word_count * 1.5);
+}
+
+/**
+ * Calculate tokens for existing content
+ */
+private function calculate_tokens_for_content($content)
+{
+    $word_count = str_word_count(strip_tags($content));
+    return intval($word_count * 1.5) + 200; // Add buffer
+}
+
+// Add AJAX handlers
+
+/**
+ * AJAX: Generate Content
+ */
+public function ajax_generate_content()
+{
+    check_ajax_referer('softworld_ai_seo_nonce', 'nonce');
+
+    if (!current_user_can('edit_posts')) {
+        wp_send_json_error(__('Permission denied', 'softworld-ai-seo'));
+    }
+
+    $topic = sanitize_textarea_field($_POST['topic'] ?? '');
+    $content_type = sanitize_text_field($_POST['content_type'] ?? 'paragraph');
+    $word_count = intval($_POST['word_count'] ?? 300);
+    $tone = sanitize_text_field($_POST['tone'] ?? 'professional');
+    $keywords = sanitize_text_field($_POST['keywords'] ?? '');
+
+    if (empty($topic)) {
+        wp_send_json_error(__('Topic is required', 'softworld-ai-seo'));
+    }
+
+    $result = $this->generate_content($topic, $content_type, $word_count, $tone, $keywords);
+
+    if (is_wp_error($result)) {
+        wp_send_json_error($result->get_error_message());
+    }
+
+    wp_send_json_success([
+        'content' => $result,
+        'word_count' => str_word_count(strip_tags($result))
+    ]);
+}
+
+/**
+ * AJAX: Expand Content
+ */
+public function ajax_expand_content()
+{
+    check_ajax_referer('softworld_ai_seo_nonce', 'nonce');
+
+    if (!current_user_can('edit_posts')) {
+        wp_send_json_error(__('Permission denied', 'softworld-ai-seo'));
+    }
+
+    $content = sanitize_textarea_field($_POST['content'] ?? '');
+    $expansion_type = sanitize_text_field($_POST['expansion_type'] ?? 'elaborate');
+    $word_count = intval($_POST['word_count'] ?? 200);
+    $tone = sanitize_text_field($_POST['tone'] ?? 'professional');
+
+    if (empty($content)) {
+        wp_send_json_error(__('Content is required', 'softworld-ai-seo'));
+    }
+
+    $result = $this->expand_content($content, $expansion_type, $word_count, $tone);
+
+    if (is_wp_error($result)) {
+        wp_send_json_error($result->get_error_message());
+    }
+
+    wp_send_json_success([
+        'expanded_content' => $result,
+        'word_count' => str_word_count(strip_tags($result))
+    ]);
+}
+
+/**
+ * AJAX: Rewrite Content
+ */
+public function ajax_rewrite_content()
+{
+    check_ajax_referer('softworld_ai_seo_nonce', 'nonce');
+
+    if (!current_user_can('edit_posts')) {
+        wp_send_json_error(__('Permission denied', 'softworld-ai-seo'));
+    }
+
+    $content = sanitize_textarea_field($_POST['content'] ?? '');
+    $rewrite_style = sanitize_text_field($_POST['rewrite_style'] ?? 'improve');
+    $tone = sanitize_text_field($_POST['tone'] ?? 'professional');
+
+    if (empty($content)) {
+        wp_send_json_error(__('Content is required', 'softworld-ai-seo'));
+    }
+
+    $result = $this->rewrite_content($content, $rewrite_style, $tone);
+
+    if (is_wp_error($result)) {
+        wp_send_json_error($result->get_error_message());
+    }
+
+    wp_send_json_success([
+        'rewritten_content' => $result,
+        'word_count' => str_word_count(strip_tags($result))
+    ]);
+}
+
+/**
+ * AJAX: Summarize Content
+ */
+public function ajax_summarize_content()
+{
+    check_ajax_referer('softworld_ai_seo_nonce', 'nonce');
+
+    if (!current_user_can('edit_posts')) {
+        wp_send_json_error(__('Permission denied', 'softworld-ai-seo'));
+    }
+
+    $content = sanitize_textarea_field($_POST['content'] ?? '');
+    $summary_length = sanitize_text_field($_POST['summary_length'] ?? 'short');
+    $format = sanitize_text_field($_POST['format'] ?? 'paragraph');
+
+    if (empty($content)) {
+        wp_send_json_error(__('Content is required', 'softworld-ai-seo'));
+    }
+
+    $result = $this->summarize_content($content, $summary_length, $format);
+
+    if (is_wp_error($result)) {
+        wp_send_json_error($result->get_error_message());
+    }
+
+    wp_send_json_success([
+        'summary' => $result,
+        'word_count' => str_word_count(strip_tags($result))
+    ]);
+}
+
+/**
+ * AJAX: Generate Outline
+ */
+public function ajax_generate_outline()
+{
+    check_ajax_referer('softworld_ai_seo_nonce', 'nonce');
+
+    if (!current_user_can('edit_posts')) {
+        wp_send_json_error(__('Permission denied', 'softworld-ai-seo'));
+    }
+
+    $topic = sanitize_textarea_field($_POST['topic'] ?? '');
+    $sections = intval($_POST['sections'] ?? 5);
+    $detail_level = sanitize_text_field($_POST['detail_level'] ?? 'detailed');
+
+    if (empty($topic)) {
+        wp_send_json_error(__('Topic is required', 'softworld-ai-seo'));
+    }
+
+    $result = $this->generate_outline($topic, $sections, $detail_level);
+
+    if (is_wp_error($result)) {
+        wp_send_json_error($result->get_error_message());
+    }
+
+    wp_send_json_success([
+        'outline' => $result,
+        'sections_count' => count($result)
+    ]);
+}
 }
