@@ -211,6 +211,14 @@ class Softworld_AI_SEO_Plugin
         add_action('wp_ajax_softworld_rewrite_content', [$this, 'ajax_rewrite_content']);
         add_action('wp_ajax_softworld_summarize_content', [$this, 'ajax_summarize_content']);
         add_action('wp_ajax_softworld_generate_outline', [$this, 'ajax_generate_outline']);
+
+        // AI Analysis AJAX handlers
+        add_action('wp_ajax_softworld_run_seo_audit', [$this, 'ajax_run_seo_audit']);
+        add_action('wp_ajax_softworld_analyze_keywords', [$this, 'ajax_analyze_keywords']);
+        add_action('wp_ajax_softworld_suggest_keywords', [$this, 'ajax_suggest_keywords']);
+        add_action('wp_ajax_softworld_get_audit_history', [$this, 'ajax_get_audit_history']);
+        add_action('wp_ajax_softworld_track_keyword', [$this, 'ajax_track_keyword']);
+        add_action('wp_ajax_softworld_get_keyword_tracking', [$this, 'ajax_get_keyword_tracking']);
     }
 
     public function init()
@@ -337,6 +345,78 @@ class Softworld_AI_SEO_Plugin
         restore_current_blog();
 
         wp_send_json_success(__('Site reset to network robots.txt successfully.', 'softworld-ai-seo'));
+    }
+
+    /**
+     * AJAX: Run SEO Audit
+     */
+    public function ajax_run_seo_audit()
+    {
+        if ($this->ai_generator) {
+            $this->ai_generator->ajax_run_seo_audit();
+        } else {
+            wp_send_json_error(__('AI generator not available', 'softworld-ai-seo'));
+        }
+    }
+
+    /**
+     * AJAX: Analyze Keywords
+     */
+    public function ajax_analyze_keywords()
+    {
+        if ($this->ai_generator) {
+            $this->ai_generator->ajax_analyze_keywords();
+        } else {
+            wp_send_json_error(__('AI generator not available', 'softworld-ai-seo'));
+        }
+    }
+
+    /**
+     * AJAX: Suggest Keywords
+     */
+    public function ajax_suggest_keywords()
+    {
+        if ($this->ai_generator) {
+            $this->ai_generator->ajax_suggest_keywords();
+        } else {
+            wp_send_json_error(__('AI generator not available', 'softworld-ai-seo'));
+        }
+    }
+
+    /**
+     * AJAX: Get Audit History
+     */
+    public function ajax_get_audit_history()
+    {
+        if ($this->ai_generator) {
+            $this->ai_generator->ajax_get_audit_history();
+        } else {
+            wp_send_json_error(__('AI generator not available', 'softworld-ai-seo'));
+        }
+    }
+
+    /**
+     * AJAX: Track Keyword
+     */
+    public function ajax_track_keyword()
+    {
+        if ($this->ai_generator) {
+            $this->ai_generator->ajax_track_keyword();
+        } else {
+            wp_send_json_error(__('AI generator not available', 'softworld-ai-seo'));
+        }
+    }
+
+    /**
+     * AJAX: Get Keyword Tracking
+     */
+    public function ajax_get_keyword_tracking()
+    {
+        if ($this->ai_generator) {
+            $this->ai_generator->ajax_get_keyword_tracking();
+        } else {
+            wp_send_json_error(__('AI generator not available', 'softworld-ai-seo'));
+        }
     }
 
     public function check_sitemap_status($blog_id = null)
@@ -1652,6 +1732,51 @@ class Softworld_AI_SEO_Plugin
                 ]
             ]);
         }
+
+        // Only on AI Analysis pages
+        $screen = get_current_screen();
+        if ($screen && (
+            $screen->id === 'softworld-seo_page_softworld-ai-seo-audit' ||
+            $screen->id === 'softworld-seo_page_softworld-ai-keyword-tracker'
+        )) {
+            // Enqueue Chart.js for keyword tracking
+            wp_enqueue_script('chart-js', 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js', [], '4.4.0', true);
+            
+            // Enqueue AI Analysis CSS
+            wp_enqueue_style(
+                'softworld-ai-analysis',
+                plugin_dir_url(__FILE__) . 'assets/css/ai-analysis.css',
+                [],
+                '1.0.0'
+            );
+
+            // Enqueue AI Analysis JS
+            wp_enqueue_script(
+                'softworld-ai-analysis',
+                plugin_dir_url(__FILE__) . 'assets/js/ai-analysis.js',
+                ['jquery', 'chart-js'],
+                '1.0.0',
+                true
+            );
+
+            // Localize script
+            wp_localize_script('softworld-ai-analysis', 'softworldAIAnalysis', [
+                'nonce' => wp_create_nonce('softworld_ai_seo_nonce'),
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'i18n' => [
+                    'auditComplete' => __('Audit completed successfully!', 'softworld-ai-seo'),
+                    'analysisComplete' => __('Analysis completed successfully!', 'softworld-ai-seo'),
+                    'suggestionsGenerated' => __('Suggestions generated successfully!', 'softworld-ai-seo'),
+                    'trackingLoaded' => __('Tracking data loaded successfully!', 'softworld-ai-seo'),
+                    'noIssues' => __('No issues found in this category', 'softworld-ai-seo'),
+                    'topicRequired' => __('Please enter a topic', 'softworld-ai-seo'),
+                    'postRequired' => __('Please select a post', 'softworld-ai-seo'),
+                    'keywordsRequired' => __('Please enter target keywords', 'softworld-ai-seo'),
+                    'keywordRequired' => __('Please enter a keyword', 'softworld-ai-seo'),
+                    'error' => __('An error occurred. Please try again.', 'softworld-ai-seo')
+                ]
+            ]);
+        }
     }
 
     public function activate()
@@ -1680,6 +1805,12 @@ class Softworld_AI_SEO_Plugin
         if ($this->ai_generator) {
             $this->ai_generator->create_usage_table();
         } 
+
+        // Create AI Analysis tables
+        if ($this->ai_generator) {
+            $this->ai_generator->create_audit_table();
+            $this->ai_generator->create_keyword_tracking_table();
+        }
 
         // Create network tables if multisite
         if (is_multisite() && $this->multisite_manager) {
@@ -1923,7 +2054,49 @@ class Softworld_AI_SEO_Plugin
             return;
         }
         
-        include plugin_dir_path(__FILE__) . 'includes/templates/writing-assistant.php';
+        include plugin_dir_path(__FILE__) . 'templates/writing-assistant.php';
+    }
+
+    /**
+     * Render SEO Audit Page
+     */
+    public function render_seo_audit_page()
+    {
+        if (!$this->is_ai_available()) {
+            ?>
+            <div class="wrap">
+                <h1><?php _e('SEO Audit', 'softworld-ai-seo'); ?></h1>
+                <div class="notice notice-error">
+                    <p><?php _e('AI features are not available. Please configure your OpenAI API key in', 'softworld-ai-seo'); ?> 
+                    <a href="<?php echo admin_url('admin.php?page=softworldit-seo-settings'); ?>"><?php _e('AI Settings', 'softworld-ai-seo'); ?></a>.</p>
+                </div>
+            </div>
+            <?php
+            return;
+        }
+        
+        include plugin_dir_path(__FILE__) . 'templates/seo-audit.php';
+    }
+
+    /**
+     * Render Keyword Tracker Page
+     */
+    public function render_keyword_tracker_page()
+    {
+        if (!$this->is_ai_available()) {
+            ?>
+            <div class="wrap">
+                <h1><?php _e('Keyword Tracker', 'softworld-ai-seo'); ?></h1>
+                <div class="notice notice-error">
+                    <p><?php _e('AI features are not available. Please configure your OpenAI API key in', 'softworld-ai-seo'); ?> 
+                    <a href="<?php echo admin_url('admin.php?page=softworldit-seo-settings'); ?>"><?php _e('AI Settings', 'softworld-ai-seo'); ?></a>.</p>
+                </div>
+            </div>
+            <?php
+            return;
+        }
+        
+        include plugin_dir_path(__FILE__) . 'templates/keyword-tracker.php';
     }
 
     /**
@@ -2044,6 +2217,25 @@ class Softworld_AI_SEO_Plugin
             'manage_options',
             'softworld-ai-seo-404-log',
             [$this->not_found_logger, 'render_admin_page']
+        );
+
+        // Add AI Analysis submenu
+        add_submenu_page(
+            'softworld-ai-seo',
+            __('SEO Audit', 'softworld-ai-seo'),
+            __('SEO Audit', 'softworld-ai-seo'),
+            'edit_posts',
+            'softworld-ai-seo-audit',
+            array($this, 'render_seo_audit_page')
+        );
+
+        add_submenu_page(
+            'softworld-ai-seo',
+            __('Keyword Tracker', 'softworld-ai-seo'),
+            __('Keyword Tracker', 'softworld-ai-seo'),
+            'edit_posts',
+            'softworld-ai-keyword-tracker',
+            array($this, 'render_keyword_tracker_page')
         );
 
         add_submenu_page(

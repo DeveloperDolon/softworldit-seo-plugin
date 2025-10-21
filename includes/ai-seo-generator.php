@@ -31,6 +31,15 @@ class Softworld_AI_SEO_Generator
         add_action('wp_ajax_softworld_test_openai_connection', [$this, 'ajax_test_openai_connection']);
         add_action('wp_ajax_softworld_generate_faqs', [$this, 'ajax_generate_faqs']);
         add_action('wp_ajax_softworld_generate_key_points', [$this, 'ajax_generate_key_points']);
+
+
+        // Add AJAX handlers
+        add_action('wp_ajax_softworld_run_seo_audit', [$this, 'ajax_run_seo_audit']);
+        add_action('wp_ajax_softworld_analyze_keywords', [$this, 'ajax_analyze_keywords']);
+        add_action('wp_ajax_softworld_suggest_keywords', [$this, 'ajax_suggest_keywords']);
+        add_action('wp_ajax_softworld_get_audit_history', [$this, 'ajax_get_audit_history']);
+        add_action('wp_ajax_softworld_track_keyword', [$this, 'ajax_track_keyword']);
+        add_action('wp_ajax_softworld_get_keyword_tracking', [$this, 'ajax_get_keyword_tracking']);
     }
 
     /**
@@ -1234,5 +1243,749 @@ public function ajax_generate_outline()
         'outline' => $result,
         'sections_count' => count($result)
     ]);
+}
+
+
+/**
+ * Perform Advanced SEO Audit with AI Analysis
+ */
+public function perform_seo_audit($url, $content, $meta_data = [])
+{
+    if (!$this->is_ai_available()) {
+        return new WP_Error('no_api_key', __('OpenAI API key is not configured', 'softworld-ai-seo'));
+    }
+
+    // Get page data for analysis
+    $page_data = $this->prepare_audit_data($url, $content, $meta_data);
+    
+    $prompt = $this->build_audit_prompt($page_data);
+    $result = $this->make_openai_request($prompt, 800);
+
+    if (is_wp_error($result)) {
+        return $result;
+    }
+
+    // Parse audit results
+    $audit_results = $this->parse_audit_response($result);
+    
+    // Log the audit
+    $this->log_ai_usage('seo_audit', strlen($content), 'audit');
+    
+    // Store audit results
+    $this->store_audit_results($url, $audit_results);
+
+    return $audit_results;
+}
+
+/**
+ * Analyze keyword performance and get AI suggestions
+ */
+public function analyze_keywords($content, $target_keywords, $current_rankings = [])
+{
+    if (!$this->is_ai_available()) {
+        return new WP_Error('no_api_key', __('OpenAI API key is not configured', 'softworld-ai-seo'));
+    }
+
+    $prompt = $this->build_keyword_analysis_prompt($content, $target_keywords, $current_rankings);
+    $result = $this->make_openai_request($prompt, 600);
+
+    if (is_wp_error($result)) {
+        return $result;
+    }
+
+    // Parse keyword suggestions
+    $keyword_analysis = $this->parse_keyword_analysis($result);
+    
+    // Log the analysis
+    $this->log_ai_usage('keyword_analysis', strlen($content), 'keywords');
+
+    return $keyword_analysis;
+}
+
+/**
+ * Get AI-powered keyword suggestions based on topic
+ */
+public function suggest_keywords($topic, $seed_keywords = '', $intent = 'informational')
+{
+    if (!$this->is_ai_available()) {
+        return new WP_Error('no_api_key', __('OpenAI API key is not configured', 'softworld-ai-seo'));
+    }
+
+    $prompt = $this->build_keyword_suggestion_prompt($topic, $seed_keywords, $intent);
+    $result = $this->make_openai_request($prompt, 400);
+
+    if (is_wp_error($result)) {
+        return $result;
+    }
+
+    // Parse keyword suggestions
+    $suggestions = $this->parse_keyword_suggestions($result);
+    
+    // Log the generation
+    $this->log_ai_usage('keyword_suggestions', strlen($topic), 'keywords');
+
+    return $suggestions;
+}
+
+/**
+ * Prepare audit data from page/post
+ */
+private function prepare_audit_data($url, $content, $meta_data)
+{
+    $word_count = str_word_count(strip_tags($content));
+    $has_headings = preg_match('/<h[1-6]/i', $content);
+    $has_images = preg_match('/<img/i', $content);
+    $internal_links = substr_count($content, get_site_url());
+    $external_links = preg_match_all('/<a\s+(?:[^>]*?\s+)?href=(["\'])(https?:\/\/(?!' . preg_quote(get_site_url(), '/') . ').*?)\1/i', $content);
+    
+    return [
+        'url' => $url,
+        'title' => $meta_data['title'] ?? '',
+        'meta_description' => $meta_data['description'] ?? '',
+        'content_length' => $word_count,
+        'has_headings' => $has_headings,
+        'has_images' => $has_images,
+        'internal_links' => $internal_links,
+        'external_links' => $external_links,
+        'content_preview' => $this->extract_content_excerpt($content, 500),
+        'target_keywords' => $meta_data['keywords'] ?? ''
+    ];
+}
+
+/**
+ * Build SEO audit prompt
+ */
+private function build_audit_prompt($page_data)
+{
+    $prompt = "You are an expert SEO auditor. Analyze the following webpage data and provide a comprehensive SEO audit.\n\n";
+    
+    $prompt .= "PAGE DATA:\n";
+    $prompt .= "URL: " . $page_data['url'] . "\n";
+    $prompt .= "Title: " . ($page_data['title'] ?: 'NOT SET') . "\n";
+    $prompt .= "Meta Description: " . ($page_data['meta_description'] ?: 'NOT SET') . "\n";
+    $prompt .= "Content Length: " . $page_data['content_length'] . " words\n";
+    $prompt .= "Has Headings: " . ($page_data['has_headings'] ? 'Yes' : 'No') . "\n";
+    $prompt .= "Has Images: " . ($page_data['has_images'] ? 'Yes' : 'No') . "\n";
+    $prompt .= "Internal Links: " . $page_data['internal_links'] . "\n";
+    $prompt .= "External Links: " . $page_data['external_links'] . "\n";
+    
+    if (!empty($page_data['target_keywords'])) {
+        $prompt .= "Target Keywords: " . $page_data['target_keywords'] . "\n";
+    }
+    
+    $prompt .= "\nContent Preview:\n" . $page_data['content_preview'] . "\n\n";
+    
+    $prompt .= "AUDIT REQUIREMENTS:\n";
+    $prompt .= "Analyze and provide detailed feedback on:\n\n";
+    $prompt .= "CRITICAL_ERRORS:\n";
+    $prompt .= "- List any critical SEO issues that must be fixed immediately\n";
+    $prompt .= "- Format: ERROR: [Issue] | ACTION: [What to do]\n\n";
+    $prompt .= "WARNINGS:\n";
+    $prompt .= "- List important issues that should be addressed soon\n";
+    $prompt .= "- Format: WARNING: [Issue] | SUGGESTION: [How to improve]\n\n";
+    $prompt .= "RECOMMENDATIONS:\n";
+    $prompt .= "- List optimization opportunities\n";
+    $prompt .= "- Format: IMPROVE: [Area] | TIP: [Specific action]\n\n";
+    $prompt .= "SCORE:\n";
+    $prompt .= "- Overall SEO score out of 100\n";
+    $prompt .= "- Format: SCORE: [number]/100\n\n";
+    $prompt .= "Provide the audit now:";
+    
+    return $prompt;
+}
+
+/**
+ * Build keyword analysis prompt
+ */
+private function build_keyword_analysis_prompt($content, $target_keywords, $current_rankings)
+{
+    $content_excerpt = $this->extract_content_excerpt($content, 800);
+    
+    $prompt = "You are an expert SEO keyword analyst. Analyze keyword usage and provide optimization suggestions.\n\n";
+    
+    $prompt .= "CONTENT PREVIEW:\n" . $content_excerpt . "\n\n";
+    $prompt .= "TARGET KEYWORDS: " . $target_keywords . "\n\n";
+    
+    if (!empty($current_rankings)) {
+        $prompt .= "CURRENT RANKINGS:\n";
+        foreach ($current_rankings as $keyword => $position) {
+            $prompt .= "- " . $keyword . ": Position " . $position . "\n";
+        }
+        $prompt .= "\n";
+    }
+    
+    $prompt .= "ANALYSIS REQUIREMENTS:\n\n";
+    $prompt .= "KEYWORD_DENSITY:\n";
+    $prompt .= "- Analyze if keywords appear naturally and at optimal frequency\n";
+    $prompt .= "- Format: DENSITY: [keyword] - [percentage]% | STATUS: [Good/Low/High]\n\n";
+    $prompt .= "KEYWORD_PLACEMENT:\n";
+    $prompt .= "- Check if keywords appear in important positions (title, first paragraph, headings)\n";
+    $prompt .= "- Format: PLACEMENT: [keyword] | FOUND_IN: [locations] | MISSING_FROM: [locations]\n\n";
+    $prompt .= "RELATED_KEYWORDS:\n";
+    $prompt .= "- Suggest semantically related keywords to include\n";
+    $prompt .= "- Format: SUGGEST: [keyword] | REASON: [why it's relevant]\n\n";
+    $prompt .= "LSI_KEYWORDS:\n";
+    $prompt .= "- Suggest LSI (Latent Semantic Indexing) keywords\n";
+    $prompt .= "- Format: LSI: [keyword] | CONTEXT: [how to use]\n\n";
+    $prompt .= "OPPORTUNITIES:\n";
+    $prompt .= "- Identify keyword opportunities for ranking improvement\n";
+    $prompt .= "- Format: OPPORTUNITY: [keyword] | ACTION: [specific recommendation]\n\n";
+    $prompt .= "Provide the analysis now:";
+    
+    return $prompt;
+}
+
+/**
+ * Build keyword suggestion prompt
+ */
+private function build_keyword_suggestion_prompt($topic, $seed_keywords, $intent)
+{
+    $prompt = "You are an expert keyword research specialist. Suggest high-value keywords for the following topic.\n\n";
+    
+    $prompt .= "TOPIC: " . $topic . "\n";
+    
+    if (!empty($seed_keywords)) {
+        $prompt .= "SEED KEYWORDS: " . $seed_keywords . "\n";
+    }
+    
+    $prompt .= "SEARCH INTENT: " . ucfirst($intent) . "\n\n";
+    
+    $prompt .= "PROVIDE KEYWORD SUGGESTIONS IN THESE CATEGORIES:\n\n";
+    $prompt .= "PRIMARY_KEYWORDS:\n";
+    $prompt .= "- 3-5 main keywords with high relevance\n";
+    $prompt .= "- Format: PRIMARY: [keyword] | DIFFICULTY: [Easy/Medium/Hard] | VOLUME: [High/Medium/Low]\n\n";
+    $prompt .= "LONG_TAIL_KEYWORDS:\n";
+    $prompt .= "- 5-8 long-tail keywords (3+ words)\n";
+    $prompt .= "- Format: LONG_TAIL: [keyword phrase] | INTENT: [what user wants]\n\n";
+    $prompt .= "QUESTION_KEYWORDS:\n";
+    $prompt .= "- 3-5 question-based keywords\n";
+    $prompt .= "- Format: QUESTION: [keyword question] | TYPE: [What/How/Why/When]\n\n";
+    $prompt .= "RELATED_TOPICS:\n";
+    $prompt .= "- 3-5 related topic keywords\n";
+    $prompt .= "- Format: RELATED: [keyword] | CONNECTION: [how it relates]\n\n";
+    $prompt .= "COMPETITOR_KEYWORDS:\n";
+    $prompt .= "- 3-5 keywords likely used by competitors\n";
+    $prompt .= "- Format: COMPETITOR: [keyword] | OPPORTUNITY: [why target it]\n\n";
+    $prompt .= "Provide the keyword suggestions now:";
+    
+    return $prompt;
+}
+
+/**
+ * Parse audit response
+ */
+private function parse_audit_response($response)
+{
+    $audit = [
+        'score' => 0,
+        'critical_errors' => [],
+        'warnings' => [],
+        'recommendations' => [],
+        'raw_response' => $response
+    ];
+    
+    $lines = explode("\n", $response);
+    $current_section = '';
+    
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if (empty($line)) continue;
+        
+        // Extract score
+        if (preg_match('/SCORE:\s*(\d+)\/100/i', $line, $matches)) {
+            $audit['score'] = intval($matches[1]);
+            continue;
+        }
+        
+        // Parse critical errors
+        if (preg_match('/ERROR:\s*(.+?)\s*\|\s*ACTION:\s*(.+)/i', $line, $matches)) {
+            $audit['critical_errors'][] = [
+                'issue' => trim($matches[1]),
+                'action' => trim($matches[2]),
+                'severity' => 'critical'
+            ];
+            continue;
+        }
+        
+        // Parse warnings
+        if (preg_match('/WARNING:\s*(.+?)\s*\|\s*SUGGESTION:\s*(.+)/i', $line, $matches)) {
+            $audit['warnings'][] = [
+                'issue' => trim($matches[1]),
+                'suggestion' => trim($matches[2]),
+                'severity' => 'warning'
+            ];
+            continue;
+        }
+        
+        // Parse recommendations
+        if (preg_match('/IMPROVE:\s*(.+?)\s*\|\s*TIP:\s*(.+)/i', $line, $matches)) {
+            $audit['recommendations'][] = [
+                'area' => trim($matches[1]),
+                'tip' => trim($matches[2]),
+                'severity' => 'info'
+            ];
+            continue;
+        }
+    }
+    
+    return $audit;
+}
+
+/**
+ * Parse keyword analysis response
+ */
+private function parse_keyword_analysis($response)
+{
+    $analysis = [
+        'density' => [],
+        'placement' => [],
+        'related_keywords' => [],
+        'lsi_keywords' => [],
+        'opportunities' => [],
+        'raw_response' => $response
+    ];
+    
+    $lines = explode("\n", $response);
+    
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if (empty($line)) continue;
+        
+        // Parse density
+        if (preg_match('/DENSITY:\s*(.+?)\s*-\s*([\d.]+)%\s*\|\s*STATUS:\s*(\w+)/i', $line, $matches)) {
+            $analysis['density'][] = [
+                'keyword' => trim($matches[1]),
+                'percentage' => floatval($matches[2]),
+                'status' => strtolower(trim($matches[3]))
+            ];
+            continue;
+        }
+        
+        // Parse placement
+        if (preg_match('/PLACEMENT:\s*(.+?)\s*\|\s*FOUND_IN:\s*(.+?)\s*\|\s*MISSING_FROM:\s*(.+)/i', $line, $matches)) {
+            $analysis['placement'][] = [
+                'keyword' => trim($matches[1]),
+                'found_in' => array_map('trim', explode(',', $matches[2])),
+                'missing_from' => array_map('trim', explode(',', $matches[3]))
+            ];
+            continue;
+        }
+        
+        // Parse related keywords
+        if (preg_match('/SUGGEST:\s*(.+?)\s*\|\s*REASON:\s*(.+)/i', $line, $matches)) {
+            $analysis['related_keywords'][] = [
+                'keyword' => trim($matches[1]),
+                'reason' => trim($matches[2])
+            ];
+            continue;
+        }
+        
+        // Parse LSI keywords
+        if (preg_match('/LSI:\s*(.+?)\s*\|\s*CONTEXT:\s*(.+)/i', $line, $matches)) {
+            $analysis['lsi_keywords'][] = [
+                'keyword' => trim($matches[1]),
+                'context' => trim($matches[2])
+            ];
+            continue;
+        }
+        
+        // Parse opportunities
+        if (preg_match('/OPPORTUNITY:\s*(.+?)\s*\|\s*ACTION:\s*(.+)/i', $line, $matches)) {
+            $analysis['opportunities'][] = [
+                'keyword' => trim($matches[1]),
+                'action' => trim($matches[2])
+            ];
+            continue;
+        }
+    }
+    
+    return $analysis;
+}
+
+/**
+ * Parse keyword suggestions response
+ */
+private function parse_keyword_suggestions($response)
+{
+    $suggestions = [
+        'primary_keywords' => [],
+        'long_tail_keywords' => [],
+        'question_keywords' => [],
+        'related_topics' => [],
+        'competitor_keywords' => [],
+        'raw_response' => $response
+    ];
+    
+    $lines = explode("\n", $response);
+    
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if (empty($line)) continue;
+        
+        // Parse primary keywords
+        if (preg_match('/PRIMARY:\s*(.+?)\s*\|\s*DIFFICULTY:\s*(\w+)\s*\|\s*VOLUME:\s*(\w+)/i', $line, $matches)) {
+            $suggestions['primary_keywords'][] = [
+                'keyword' => trim($matches[1]),
+                'difficulty' => strtolower(trim($matches[2])),
+                'volume' => strtolower(trim($matches[3]))
+            ];
+            continue;
+        }
+        
+        // Parse long-tail keywords
+        if (preg_match('/LONG_TAIL:\s*(.+?)\s*\|\s*INTENT:\s*(.+)/i', $line, $matches)) {
+            $suggestions['long_tail_keywords'][] = [
+                'keyword' => trim($matches[1]),
+                'intent' => trim($matches[2])
+            ];
+            continue;
+        }
+        
+        // Parse question keywords
+        if (preg_match('/QUESTION:\s*(.+?)\s*\|\s*TYPE:\s*(\w+)/i', $line, $matches)) {
+            $suggestions['question_keywords'][] = [
+                'keyword' => trim($matches[1]),
+                'type' => trim($matches[2])
+            ];
+            continue;
+        }
+        
+        // Parse related topics
+        if (preg_match('/RELATED:\s*(.+?)\s*\|\s*CONNECTION:\s*(.+)/i', $line, $matches)) {
+            $suggestions['related_topics'][] = [
+                'keyword' => trim($matches[1]),
+                'connection' => trim($matches[2])
+            ];
+            continue;
+        }
+        
+        // Parse competitor keywords
+        if (preg_match('/COMPETITOR:\s*(.+?)\s*\|\s*OPPORTUNITY:\s*(.+)/i', $line, $matches)) {
+            $suggestions['competitor_keywords'][] = [
+                'keyword' => trim($matches[1]),
+                'opportunity' => trim($matches[2])
+            ];
+            continue;
+        }
+    }
+    
+    return $suggestions;
+}
+
+/**
+ * Store audit results in database
+ */
+public function store_audit_results($url, $audit_results)
+{
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'softworld_seo_audits';
+    
+    // Create table if not exists
+    $this->create_audit_table();
+    
+    $wpdb->insert(
+        $table_name,
+        [
+            'url' => $url,
+            'score' => $audit_results['score'],
+            'critical_errors' => json_encode($audit_results['critical_errors']),
+            'warnings' => json_encode($audit_results['warnings']),
+            'recommendations' => json_encode($audit_results['recommendations']),
+            'audit_date' => current_time('mysql'),
+            'user_id' => get_current_user_id()
+        ],
+        ['%s', '%d', '%s', '%s', '%s', '%s', '%d']
+    );
+    
+    return $wpdb->insert_id;
+}
+
+/**
+ * Create audit table
+ */
+public function create_audit_table()
+{
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'softworld_seo_audits';
+    $charset_collate = $wpdb->get_charset_collate();
+    
+    $sql = "CREATE TABLE IF NOT EXISTS $table_name (
+        id bigint(20) NOT NULL AUTO_INCREMENT,
+        url varchar(500) NOT NULL,
+        score int(3) NOT NULL DEFAULT 0,
+        critical_errors longtext,
+        warnings longtext,
+        recommendations longtext,
+        audit_date datetime DEFAULT CURRENT_TIMESTAMP,
+        user_id bigint(20) NOT NULL,
+        PRIMARY KEY (id),
+        KEY url (url(191)),
+        KEY audit_date (audit_date),
+        KEY user_id (user_id)
+    ) $charset_collate;";
+    
+    require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+    dbDelta($sql);
+}
+
+/**
+ * Get audit history
+ */
+public function get_audit_history($url = '', $limit = 10)
+{
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'softworld_seo_audits';
+    
+    if ($url) {
+        return $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM $table_name WHERE url = %s ORDER BY audit_date DESC LIMIT %d",
+            $url,
+            $limit
+        ), ARRAY_A);
+    }
+    
+    return $wpdb->get_results($wpdb->prepare(
+        "SELECT * FROM $table_name ORDER BY audit_date DESC LIMIT %d",
+        $limit
+    ), ARRAY_A);
+}
+
+/**
+ * AJAX: Run SEO Audit
+ */
+public function ajax_run_seo_audit()
+{
+    check_ajax_referer('softworld_ai_seo_nonce', 'nonce');
+
+    if (!current_user_can('edit_posts')) {
+        wp_send_json_error(__('Permission denied', 'softworld-ai-seo'));
+    }
+
+    $post_id = intval($_POST['post_id'] ?? 0);
+    
+    if (!$post_id) {
+        wp_send_json_error(__('Invalid post ID', 'softworld-ai-seo'));
+    }
+
+    $post = get_post($post_id);
+    if (!$post) {
+        wp_send_json_error(__('Post not found', 'softworld-ai-seo'));
+    }
+
+    $url = get_permalink($post_id);
+    $content = $post->post_content;
+    $meta_data = [
+        'title' => get_post_meta($post_id, '_softworld_ai_seo_title', true) ?: $post->post_title,
+        'description' => get_post_meta($post_id, '_softworld_ai_seo_description', true),
+        'keywords' => get_post_meta($post_id, '_softworld_ai_seo_keywords', true)
+    ];
+
+    $result = $this->perform_seo_audit($url, $content, $meta_data);
+
+    if (is_wp_error($result)) {
+        wp_send_json_error($result->get_error_message());
+    }
+
+    wp_send_json_success($result);
+}
+
+/**
+ * AJAX: Analyze Keywords
+ */
+public function ajax_analyze_keywords()
+{
+    check_ajax_referer('softworld_ai_seo_nonce', 'nonce');
+
+    if (!current_user_can('edit_posts')) {
+        wp_send_json_error(__('Permission denied', 'softworld-ai-seo'));
+    }
+
+    $content = sanitize_textarea_field($_POST['content'] ?? '');
+    $target_keywords = sanitize_text_field($_POST['target_keywords'] ?? '');
+    $current_rankings = json_decode(stripslashes($_POST['current_rankings'] ?? '{}'), true);
+
+    if (empty($content)) {
+        wp_send_json_error(__('Content is required', 'softworld-ai-seo'));
+    }
+
+    $result = $this->analyze_keywords($content, $target_keywords, $current_rankings);
+
+    if (is_wp_error($result)) {
+        wp_send_json_error($result->get_error_message());
+    }
+
+    wp_send_json_success($result);
+}
+
+/**
+ * AJAX: Suggest Keywords
+ */
+public function ajax_suggest_keywords()
+{
+    check_ajax_referer('softworld_ai_seo_nonce', 'nonce');
+
+    if (!current_user_can('edit_posts')) {
+        wp_send_json_error(__('Permission denied', 'softworld-ai-seo'));
+    }
+
+    $topic = sanitize_textarea_field($_POST['topic'] ?? '');
+    $seed_keywords = sanitize_text_field($_POST['seed_keywords'] ?? '');
+    $intent = sanitize_text_field($_POST['intent'] ?? 'informational');
+
+    if (empty($topic)) {
+        wp_send_json_error(__('Topic is required', 'softworld-ai-seo'));
+    }
+
+    $result = $this->suggest_keywords($topic, $seed_keywords, $intent);
+
+    if (is_wp_error($result)) {
+        wp_send_json_error($result->get_error_message());
+    }
+
+    wp_send_json_success($result);
+}
+
+/**
+ * AJAX: Get Audit History
+ */
+public function ajax_get_audit_history()
+{
+    check_ajax_referer('softworld_ai_seo_nonce', 'nonce');
+
+    if (!current_user_can('edit_posts')) {
+        wp_send_json_error(__('Permission denied', 'softworld-ai-seo'));
+    }
+
+    $url = sanitize_text_field($_POST['url'] ?? '');
+    $limit = intval($_POST['limit'] ?? 10);
+
+    $history = $this->get_audit_history($url, $limit);
+
+    // Decode JSON fields
+    foreach ($history as &$audit) {
+        $audit['critical_errors'] = json_decode($audit['critical_errors'], true);
+        $audit['warnings'] = json_decode($audit['warnings'], true);
+        $audit['recommendations'] = json_decode($audit['recommendations'], true);
+    }
+
+    wp_send_json_success($history);
+}
+
+/**
+ * AJAX: Track Keyword
+ */
+public function ajax_track_keyword()
+{
+    check_ajax_referer('softworld_ai_seo_nonce', 'nonce');
+
+    if (!current_user_can('edit_posts')) {
+        wp_send_json_error(__('Permission denied', 'softworld-ai-seo'));
+    }
+
+    $keyword = sanitize_text_field($_POST['keyword'] ?? '');
+    $url = sanitize_text_field($_POST['url'] ?? '');
+    $position = intval($_POST['position'] ?? 0);
+
+    if (empty($keyword) || empty($url)) {
+        wp_send_json_error(__('Keyword and URL are required', 'softworld-ai-seo'));
+    }
+
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'softworld_keyword_tracking';
+    
+    // Create table if not exists
+    $this->create_keyword_tracking_table();
+
+    $wpdb->insert(
+        $table_name,
+        [
+            'keyword' => $keyword,
+            'url' => $url,
+            'position' => $position,
+            'checked_date' => current_time('mysql'),
+            'user_id' => get_current_user_id()
+        ],
+        ['%s', '%s', '%d', '%s', '%d']
+    );
+
+    wp_send_json_success(__('Keyword tracked successfully', 'softworld-ai-seo'));
+}
+
+/**
+ * AJAX: Get Keyword Tracking
+ */
+public function ajax_get_keyword_tracking()
+{
+    check_ajax_referer('softworld_ai_seo_nonce', 'nonce');
+
+    if (!current_user_can('edit_posts')) {
+        wp_send_json_error(__('Permission denied', 'softworld-ai-seo'));
+    }
+
+    $url = sanitize_text_field($_POST['url'] ?? '');
+    $days = intval($_POST['days'] ?? 30);
+
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'softworld_keyword_tracking';
+
+    $query = "SELECT keyword, position, checked_date 
+              FROM $table_name 
+              WHERE checked_date >= DATE_SUB(NOW(), INTERVAL %d DAY)";
+    
+    $params = [$days];
+    
+    if ($url) {
+        $query .= " AND url = %s";
+        $params[] = $url;
+    }
+    
+    $query .= " ORDER BY checked_date DESC";
+
+    $results = $wpdb->get_results($wpdb->prepare($query, $params), ARRAY_A);
+
+    // Group by keyword for trend analysis
+    $tracking_data = [];
+    foreach ($results as $row) {
+        $keyword = $row['keyword'];
+        if (!isset($tracking_data[$keyword])) {
+            $tracking_data[$keyword] = [
+                'keyword' => $keyword,
+                'history' => []
+            ];
+        }
+        $tracking_data[$keyword]['history'][] = [
+            'position' => $row['position'],
+            'date' => $row['checked_date']
+        ];
+    }
+
+    wp_send_json_success(array_values($tracking_data));
+}
+
+/**
+ * Create keyword tracking table
+ */
+public function create_keyword_tracking_table()
+{
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'softworld_keyword_tracking';
+    $charset_collate = $wpdb->get_charset_collate();
+    
+    $sql = "CREATE TABLE IF NOT EXISTS $table_name (
+        id bigint(20) NOT NULL AUTO_INCREMENT,
+        keyword varchar(255) NOT NULL,
+        url varchar(500) NOT NULL,
+        position int(4) NOT NULL DEFAULT 0,
+        checked_date datetime DEFAULT CURRENT_TIMESTAMP,
+        user_id bigint(20) NOT NULL,
+        PRIMARY KEY (id),
+        KEY keyword (keyword),
+        KEY url (url(191)),
+        KEY checked_date (checked_date),
+        KEY user_id (user_id)
+    ) $charset_collate;";
+    
+    require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+    dbDelta($sql);
 }
 }
